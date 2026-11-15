@@ -1,0 +1,2589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HomeNest — Family DiskStation</title>
+  <style>
+    :root {
+      --glass-surface: rgba(255, 255, 255, 0.07);
+      --glass-hover: rgba(255, 255, 255, 0.13);
+      --glass-border: rgba(255, 255, 255, 0.18);
+      --glass-highlight: rgba(255, 255, 255, 0.32);
+      --accent: #38bdf8;
+      --warm: #fbbf24;
+      --emerald: #34d399;
+      --danger: #fb7185;
+      --purple: #a78bfa;
+      --text: #f8fafc;
+      --muted: rgba(248, 250, 252, 0.65);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: #070d19;
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      position: relative;
+      user-select: none;
+    }
+
+    /* AMBIENT GLASSMORPHISM ORBS */
+    .ambient-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      background: radial-gradient(circle at 20% 20%, #102a43 0%, #070d19 75%);
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(95px);
+      opacity: 0.65;
+      animation: floatOrb 18s ease-in-out infinite alternate;
+    }
+    .orb-1 { width: 520px; height: 520px; background: #0284c7; top: -120px; left: -100px; }
+    .orb-2 { width: 460px; height: 460px; background: #d97706; bottom: -140px; right: -80px; animation-delay: -5s; }
+    .orb-3 { width: 380px; height: 380px; background: #059669; top: 38%; left: 45%; opacity: 0.38; animation-delay: -10s; }
+
+    @keyframes floatOrb {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(35px, -30px) scale(1.08); }
+    }
+
+    .glass-panel {
+      background: var(--glass-surface);
+      backdrop-filter: blur(26px) saturate(160%);
+      -webkit-backdrop-filter: blur(26px) saturate(160%);
+      border: 1px solid var(--glass-border);
+      border-top-color: var(--glass-highlight);
+      border-left-color: var(--glass-highlight);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    }
+
+    .icon {
+      width: 17px;
+      height: 17px;
+      stroke: currentColor;
+      stroke-width: 1.9;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+    .icon-lg { width: 26px; height: 26px; }
+
+    /* AUTH SCREEN */
+    #auth-screen {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+    .auth-card { width: 400px; border-radius: 24px; padding: 36px; }
+    .brand-header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+    .brand-emblem {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, rgba(251, 191, 36, 0.35), rgba(56, 189, 248, 0.25));
+      border: 1px solid var(--glass-highlight);
+      display: flex; align-items: center; justify-content: center; color: var(--warm);
+    }
+    .auth-card h1 { font-size: 1.65rem; font-weight: 700; letter-spacing: -0.02em; }
+    .auth-card p { font-size: 0.86rem; color: var(--muted); margin-bottom: 22px; }
+
+    .tabs {
+      display: flex; gap: 6px; padding: 4px; border-radius: 12px;
+      background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-bottom: 20px;
+    }
+    .tab-btn {
+      flex: 1; padding: 8px; border: none; background: transparent;
+      color: var(--muted); border-radius: 9px; cursor: pointer; font-weight: 600;
+      font-size: 0.85rem; transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.18); color: var(--text);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+    .field { margin-bottom: 15px; }
+    .field label { display: block; font-size: 0.78rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .field input, .field select {
+      width: 100%; padding: 11px 14px; border-radius: 12px;
+      border: 1px solid var(--glass-border); background: rgba(255, 255, 255, 0.06);
+      color: var(--text); outline: none; font-size: 0.9rem;
+    }
+    .field input:focus, .field select:focus { border-color: var(--warm); background: rgba(255, 255, 255, 0.11); }
+    .field select option { background: #0f172a; color: #f8fafc; }
+
+    .primary-btn {
+      width: 100%; padding: 12px; border: 1px solid rgba(255, 255, 255, 0.35);
+      border-radius: 12px; background: linear-gradient(135deg, rgba(251, 191, 36, 0.85), rgba(245, 158, 11, 0.9));
+      color: #0f172a; font-weight: 700; font-size: 0.92rem; cursor: pointer; margin-top: 6px;
+      box-shadow: 0 8px 24px rgba(245, 158, 11, 0.28);
+    }
+    .error-msg { color: var(--danger); font-size: 0.82rem; margin-top: 10px; min-height: 18px; }
+
+    /* DESKTOP ENVIRONMENT */
+    #desktop { position: relative; z-index: 10; display: none; height: 100vh; flex-direction: column; }
+
+    .topbar {
+      height: 46px; margin: 12px 16px 0; border-radius: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 16px; font-size: 0.85rem; z-index: 20;
+    }
+    .topbar-left, .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .brand-pill { display: flex; align-items: center; gap: 8px; font-weight: 700; color: var(--warm); }
+    .badge {
+      padding: 3px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 700;
+      background: rgba(255, 255, 255, 0.1); border: 1px solid var(--glass-border);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .glass-btn {
+      background: rgba(255, 255, 255, 0.08); border: 1px solid var(--glass-border);
+      color: var(--text); padding: 6px 12px; border-radius: 10px; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 7px; font-size: 0.82rem; font-weight: 500;
+      transition: all 0.2s;
+    }
+    .glass-btn:hover { background: var(--glass-hover); border-color: var(--glass-highlight); }
+    .glass-btn.warm {
+      background: rgba(251, 191, 36, 0.18); border-color: rgba(251, 191, 36, 0.45); color: var(--warm);
+    }
+    .glass-btn.warm:hover { background: rgba(251, 191, 36, 0.28); }
+    .glass-btn.accent {
+      background: rgba(56, 189, 248, 0.18); border-color: rgba(56, 189, 248, 0.45); color: var(--accent);
+    }
+    .glass-btn.accent:hover { background: rgba(56, 189, 248, 0.28); }
+    .glass-btn.danger {
+      background: rgba(251, 113, 133, 0.15); border-color: rgba(251, 113, 133, 0.35); color: var(--danger);
+    }
+    .glass-btn.danger:hover { background: rgba(251, 113, 133, 0.26); }
+
+    .unread-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--danger);
+      box-shadow: 0 0 10px var(--danger); display: none;
+    }
+
+    /* WORKSPACE & LEFT SIDEBAR DOCK */
+    .workspace {
+      flex: 1; display: grid; grid-template-columns: 98px 1fr;
+      padding: 16px; gap: 16px; position: relative; overflow: hidden;
+    }
+    .dock {
+      border-radius: 20px; padding: 14px 8px; display: flex;
+      flex-direction: column; gap: 10px; align-items: center; height: fit-content;
+    }
+    .app-icon {
+      width: 80px; text-align: center; cursor: pointer; padding: 9px 4px;
+      border-radius: 14px; border: 1px solid transparent; transition: all 0.2s;
+      position: relative;
+    }
+    .app-icon:hover, .app-icon.active { background: rgba(255, 255, 255, 0.12); border-color: var(--glass-border); }
+    .app-box {
+      width: 48px; height: 48px; margin: 0 auto 6px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      border: 1px solid var(--glass-highlight); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    }
+    .app-box.desktop-icon { background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(99, 102, 241, 0.25)); color: var(--accent); }
+    .app-box.drive-icon { background: linear-gradient(135deg, rgba(251, 191, 36, 0.45), rgba(245, 158, 11, 0.2)); color: var(--warm); }
+    .app-box.terminal-icon { background: linear-gradient(135deg, rgba(167, 139, 250, 0.42), rgba(15, 23, 42, 0.65)); color: #e9d5ff; }
+    .app-box.trash-icon { background: linear-gradient(135deg, rgba(251, 113, 133, 0.35), rgba(225, 29, 72, 0.18)); color: var(--danger); }
+    .app-box.safety-icon { background: linear-gradient(135deg, rgba(52, 211, 153, 0.4), rgba(16, 185, 129, 0.18)); color: var(--emerald); }
+    .app-icon span { font-size: 0.75rem; font-weight: 600; color: var(--text); }
+    .dock-count-badge {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 999px;
+      display: none;
+    }
+
+    /* GLASS WINDOWS */
+    .window { border-radius: 22px; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .window-header {
+      padding: 13px 20px; background: rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid var(--glass-border);
+      display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+    }
+    .window-title { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.95rem; }
+
+    /* DESKTOP CANVAS (FOLDERS, FILES & TRASH BIN) */
+    .desktop-canvas {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+      background: radial-gradient(circle at 50% 45%, rgba(56, 189, 248, 0.06), transparent 70%);
+    }
+    .desktop-shortcut {
+      position: absolute;
+      width: 96px;
+      padding: 10px 6px;
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      cursor: grab;
+      text-align: center;
+      border: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s, transform 0.15s;
+      z-index: 2;
+    }
+    .desktop-shortcut:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--glass-border);
+    }
+    .desktop-shortcut.selected {
+      background: rgba(56, 189, 248, 0.22);
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.45);
+    }
+    .desktop-shortcut.drop-hover {
+      background: rgba(251, 191, 36, 0.24);
+      border-color: var(--warm);
+      transform: scale(1.07);
+    }
+    .desktop-shortcut:active { cursor: grabbing; }
+
+    .shortcut-tile {
+      width: 52px;
+      height: 52px;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.32), rgba(99, 102, 241, 0.22));
+      border: 1px solid var(--glass-highlight);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      color: var(--accent);
+    }
+    .shortcut-tile.folder-tile {
+      background: rgba(255, 255, 255, 0.09);
+    }
+    .shortcut-label {
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--text);
+      text-shadow: 0 1px 4px rgba(0, 0, 0, 0.85);
+      word-break: break-word;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .desktop-trash-bin {
+      position: absolute;
+      right: 28px;
+      bottom: 26px;
+      width: 102px;
+      padding: 12px 8px;
+      border-radius: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      transition: all 0.18s;
+      z-index: 3;
+    }
+    .desktop-trash-bin:hover {
+      background: rgba(251, 113, 133, 0.16);
+      border-color: rgba(251, 113, 133, 0.45);
+    }
+    .desktop-trash-bin.trash-drop-active {
+      background: rgba(251, 113, 133, 0.32);
+      border-color: var(--danger);
+      box-shadow: 0 0 24px rgba(251, 113, 133, 0.45);
+      transform: scale(1.1);
+    }
+    .trash-tile {
+      width: 52px;
+      height: 52px;
+      border-radius: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, rgba(251, 113, 133, 0.32), rgba(225, 29, 72, 0.18));
+      border: 1px solid rgba(251, 113, 133, 0.45);
+      color: var(--danger);
+    }
+
+    /* TERMINAL WINDOW */
+    .terminal-shell {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: rgba(6, 10, 20, 0.72);
+      overflow: hidden;
+      font-family: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .terminal-toolbar {
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+      background: rgba(255, 255, 255, 0.03);
+    }
+    .term-chip {
+      font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+      font-size: 0.75rem;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: rgba(167, 139, 250, 0.14);
+      border: 1px solid rgba(167, 139, 250, 0.32);
+      color: #e9d5ff;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .term-chip:hover {
+      background: rgba(167, 139, 250, 0.28);
+      border-color: var(--purple);
+    }
+    .terminal-output {
+      flex: 1;
+      padding: 16px 20px;
+      overflow-y: auto;
+      font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: #e2e8f0;
+      user-select: text;
+      cursor: text;
+    }
+    .term-entry { margin-bottom: 12px; }
+    .term-cmd-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #f8fafc;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .term-prompt-user { color: var(--emerald); }
+    .term-prompt-path { color: var(--accent); }
+    .term-response {
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #cbd5e1;
+      padding-left: 2px;
+    }
+    .term-input-bar {
+      padding: 12px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .term-prompt-label {
+      font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    #terminal-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f8fafc;
+      font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+      font-size: 0.88rem;
+      caret-color: var(--emerald);
+    }
+
+    /* SPLIT DRIVE LAYOUT */
+    .drive-split {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 330px;
+      overflow: hidden;
+    }
+    .drive-main {
+      padding: 18px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .inspector-sidebar {
+      border-left: 1px solid var(--glass-border);
+      background: rgba(0, 0, 0, 0.18);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow-y: auto;
+    }
+    .inspector-header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .inspector-title {
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .preview-mode-switch {
+      display: flex;
+      gap: 4px;
+      padding: 3px;
+      border-radius: 9px;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .mode-pill {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .mode-pill.active {
+      background: rgba(255, 255, 255, 0.18);
+      color: var(--text);
+    }
+
+    .live-preview-stage {
+      width: 100%;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: rgba(0, 0, 0, 0.32);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 165px;
+      max-height: 230px;
+      position: relative;
+    }
+    .live-preview-stage img { max-width: 100%; max-height: 228px; object-fit: contain; display: block; }
+    .live-preview-stage iframe { width: 100%; height: 228px; border: none; background: #ffffff; }
+    .live-preview-stage pre {
+      width: 100%;
+      max-height: 228px;
+      overflow: auto;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      user-select: text;
+      text-align: left;
+    }
+    .live-preview-stage audio { width: 92%; }
+    .live-preview-stage video { max-width: 100%; max-height: 228px; }
+
+    /* FULLSCREEN PREVIEW OVERLAY */
+    #fullscreen-preview {
+      position: fixed;
+      inset: 18px;
+      z-index: 85;
+      border-radius: 24px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      background: rgba(10, 17, 32, 0.86);
+      backdrop-filter: blur(32px) saturate(180%);
+      border: 1px solid var(--glass-highlight);
+      box-shadow: 0 30px 90px rgba(0, 0, 0, 0.75);
+    }
+    #fullscreen-preview.open { display: flex; }
+    .fs-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--glass-border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.04);
+    }
+    .fs-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow: auto;
+    }
+    .fs-body img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 12px; }
+    .fs-body iframe { width: 100%; height: 100%; border: none; border-radius: 12px; background: #fff; }
+    .fs-body pre {
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      padding: 22px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      color: #f1f5f9;
+      white-space: pre-wrap;
+      user-select: text;
+    }
+    .fs-body video { max-width: 100%; max-height: 100%; border-radius: 12px; }
+
+    .inspector-preview {
+      border-radius: 16px;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 10px;
+    }
+    .inspector-icon-badge {
+      width: 54px;
+      height: 54px;
+      border-radius: 16px;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+    .inspector-meta { display: flex; flex-direction: column; gap: 9px; font-size: 0.81rem; }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .meta-label { color: var(--muted); }
+    .meta-val { font-weight: 600; text-align: right; word-break: break-word; }
+    .scan-note-box {
+      padding: 11px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: var(--muted);
+      user-select: text;
+    }
+
+    /* BREADCRUMBS & ACTION TOOLBAR */
+    .action-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .breadcrumbs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 0.82rem; }
+    .crumb {
+      padding: 5px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.07);
+      border: 1px solid rgba(255, 255, 255, 0.12); cursor: pointer;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .crumb:hover { background: rgba(255, 255, 255, 0.15); }
+
+    .drop-banner {
+      border: 1.5px dashed rgba(251, 191, 36, 0.5); border-radius: 14px;
+      padding: 12px 16px; background: rgba(251, 191, 36, 0.06);
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; cursor: pointer; transition: all 0.2s;
+    }
+    .drop-banner:hover { background: rgba(251, 191, 36, 0.14); border-color: var(--warm); }
+    .drop-overlay {
+      position: absolute; inset: 12px; border-radius: 18px;
+      background: rgba(15, 23, 42, 0.76); backdrop-filter: blur(14px);
+      border: 2px dashed var(--warm); z-index: 30;
+      display: none; flex-direction: column; align-items: center; justify-content: center;
+      gap: 10px; color: var(--warm); pointer-events: none;
+    }
+    .window.dragging-over .drop-overlay { display: flex; }
+
+    /* TABLE & SELECTION CHECKBOXES */
+    .table-wrap {
+      border-radius: 16px; border: 1px solid var(--glass-border);
+      background: rgba(0, 0, 0, 0.16); overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    th {
+      color: var(--muted); font-weight: 600; font-size: 0.74rem;
+      text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255, 255, 255, 0.04);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr { cursor: pointer; transition: background 0.12s; }
+    tr:hover td { background: rgba(255, 255, 255, 0.05); }
+    tr.selected td { background: rgba(56, 189, 248, 0.14); }
+
+    .glass-check {
+      appearance: none; width: 17px; height: 17px; border-radius: 5px;
+      border: 1.5px solid var(--glass-highlight); background: rgba(255, 255, 255, 0.06);
+      cursor: pointer; display: inline-grid; place-content: center;
+    }
+    .glass-check:checked { background: var(--accent); border-color: var(--accent); }
+    .glass-check:checked::before {
+      content: ""; width: 9px; height: 5px;
+      border-left: 2px solid #070d19; border-bottom: 2px solid #070d19;
+      transform: rotate(-45deg) translate(1px, -1px);
+    }
+
+    .file-cell { display: flex; align-items: center; gap: 10px; }
+    .pill {
+      padding: 3px 9px; border-radius: 999px; font-size: 0.73rem; font-weight: 600;
+      display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent;
+    }
+    .pill.Clean { background: rgba(52, 211, 153, 0.16); color: #6ee7b7; border-color: rgba(52, 211, 153, 0.3); }
+    .pill.Flagged { background: rgba(251, 113, 133, 0.22); color: #fda4af; border-color: rgba(251, 113, 133, 0.4); }
+    .pill.Skipped { background: rgba(148, 163, 184, 0.16); color: #cbd5e1; border-color: rgba(148, 163, 184, 0.25); }
+    .pill.Folder { background: rgba(255, 255, 255, 0.08); color: var(--muted); border-color: rgba(255, 255, 255, 0.14); }
+
+    /* MARQUEE LASSO SELECTION BOX */
+    .selection-marquee {
+      position: fixed;
+      border: 1.5px solid var(--accent);
+      background: rgba(56, 189, 248, 0.16);
+      backdrop-filter: blur(4px);
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 95;
+      display: none;
+    }
+
+    /* RIGHT-CLICK CONTEXT MENU */
+    #context-menu {
+      position: fixed; z-index: 100; min-width: 215px; border-radius: 14px;
+      padding: 6px; display: none; flex-direction: column; gap: 2px;
+      background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(28px) saturate(180%);
+      border: 1px solid var(--glass-highlight); box-shadow: 0 18px 42px rgba(0, 0, 0, 0.6);
+    }
+    .ctx-item {
+      padding: 9px 12px; border-radius: 9px; font-size: 0.83rem;
+      display: flex; align-items: center; gap: 9px; cursor: pointer;
+      color: var(--text); transition: background 0.12s;
+    }
+    .ctx-item:hover { background: rgba(255, 255, 255, 0.14); }
+    .ctx-item.danger { color: var(--danger); }
+    .ctx-divider { height: 1px; background: rgba(255, 255, 255, 0.1); margin: 4px 6px; }
+
+    /* GLASS MODAL */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 90; background: rgba(7, 13, 25, 0.6);
+      backdrop-filter: blur(8px); display: none; align-items: center; justify-content: center;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-card { width: 370px; border-radius: 22px; padding: 26px; }
+    .modal-card h3 { font-size: 1.1rem; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .color-swatches { display: flex; gap: 10px; margin-top: 6px; }
+    .swatch {
+      width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.15s, border-color 0.15s;
+    }
+    .swatch:hover { transform: scale(1.1); }
+    .swatch.active { border-color: #ffffff; box-shadow: 0 0 12px rgba(255,255,255,0.6); transform: scale(1.12); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+    /* SECURITY SETTINGS */
+    .window-body { padding: 22px; overflow-y: auto; flex: 1; }
+    .settings-box {
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--glass-border);
+      border-radius: 16px; padding: 20px; margin-bottom: 18px;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    }
+    .engine-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .engine-card {
+      background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 14px; padding: 16px;
+    }
+    .engine-card h4 { font-size: 0.88rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; color: var(--warm); }
+    .engine-card p { font-size: 0.8rem; color: var(--muted); line-height: 1.45; }
+
+    .switch { position: relative; display: inline-block; width: 48px; height: 26px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; cursor: pointer; inset: 0;
+      background-color: rgba(255, 255, 255, 0.16); border: 1px solid var(--glass-border);
+      transition: .3s; border-radius: 26px;
+    }
+    .slider:before {
+      position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background-color: white; transition: .3s; border-radius: 50%;
+    }
+    input:checked + .slider { background-color: rgba(251, 191, 36, 0.75); border-color: var(--warm); }
+    input:checked + .slider:before { transform: translateX(22px); }
+    input:disabled + .slider { opacity: 0.55; cursor: not-allowed; }
+
+    /* NOTIFICATION CENTER */
+    #notif-drawer {
+      position: fixed; top: 70px; right: -400px; width: 370px; height: calc(100vh - 86px);
+      border-radius: 22px; transition: right 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+      z-index: 50; display: flex; flex-direction: column; padding: 18px;
+    }
+    #notif-drawer.open { right: 16px; }
+    .notif-header {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      padding-bottom: 14px; border-bottom: 1px solid var(--glass-border);
+    }
+    .notif-list { flex: 1; overflow-y: auto; margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .notif-item {
+      padding: 13px; border-radius: 14px; background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1); border-left: 3px solid var(--warm); font-size: 0.83rem;
+      user-select: text;
+    }
+    .notif-item.alert { border-left-color: var(--danger); background: rgba(251, 113, 133, 0.16); }
+    .notif-item h4 { font-size: 0.88rem; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+    .notif-item time { font-size: 0.72rem; color: var(--muted); display: block; margin-top: 6px; }
+  </style>
+</head>
+<body>
+
+  <div class="ambient-bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- AUTHENTICATION -->
+  <div id="auth-screen">
+    <div class="auth-card glass-panel">
+      <div class="brand-header">
+        <div class="brand-emblem">
+          <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.5"/><path d="M9 21v-6a3 3 0 0 1 6 0v6"/></svg>
+        </div>
+        <h1>HomeNest</h1>
+      </div>
+      <p>Frosted Family Cloud Drive &amp; Home DiskStation</p>
+
+      <div class="tabs">
+        <button class="tab-btn active" id="tab-login" onclick="switchAuthTab('login')">Log In</button>
+        <button class="tab-btn" id="tab-signup" onclick="switchAuthTab('signup')">Join Family</button>
+      </div>
+
+      <div class="field">
+        <label>Family Member Name</label>
+        <input type="text" id="auth-user" placeholder="e.g., ruien" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="auth-pass" placeholder="••••••••" />
+      </div>
+      <div class="field" id="role-field" style="display: none;">
+        <label>Family Role</label>
+        <select id="auth-role">
+          <option value="kid">Kid (Sensitive Alerts Always ON)</option>
+          <option value="adult">Adult (Configurable Alerts)</option>
+          <option value="parent">Parent (Full Family Overview)</option>
+        </select>
+      </div>
+
+      <button class="primary-btn" id="auth-submit" onclick="submitAuth()">Sign In to HomeNest</button>
+      <div class="error-msg" id="auth-error"></div>
+    </div>
+  </div>
+
+  <!-- DESKTOP -->
+  <div id="desktop">
+    <div class="topbar glass-panel">
+      <div class="topbar-left">
+        <div class="brand-pill">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.5"/></svg>
+          <span>HomeNest DSM</span>
+        </div>
+        <span class="badge" id="user-badge">MEMBER</span>
+      </div>
+      <div class="topbar-right">
+        <span style="color: var(--muted); font-size: 0.78rem;">Shortcut: <strong>Alt + N</strong></span>
+        <button class="glass-btn" onclick="toggleNotifCenter()">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>Notifications</span>
+          <span class="unread-dot" id="unread-dot"></span>
+        </button>
+        <span id="clock" style="font-variant-numeric: tabular-nums;"></span>
+        <button class="glass-btn" onclick="logout()">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          <span>Sign Out</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="workspace">
+      <!-- LEFT SIDEBAR (DOCK) -->
+      <div class="dock glass-panel">
+        <div class="app-icon active" id="dock-desktop" onclick="switchView('desktop')">
+          <div class="app-box desktop-icon">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </div>
+          <span>Desktop</span>
+        </div>
+        <div class="app-icon" id="dock-drive" onclick="switchView('drive')">
+          <div class="app-box drive-icon">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <span>NestDrive</span>
+        </div>
+        <div class="app-icon" id="dock-terminal" onclick="switchView('terminal')">
+          <div class="app-box terminal-icon">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          </div>
+          <span>Terminal</span>
+        </div>
+        <div class="app-icon" id="dock-trash" onclick="switchView('trash')">
+          <span class="dock-count-badge" id="dock-trash-badge">0</span>
+          <div class="app-box trash-icon">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          </div>
+          <span>Trash</span>
+        </div>
+        <div class="app-icon" id="dock-security" onclick="switchView('security')">
+          <div class="app-box safety-icon">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+          </div>
+          <span>Safety</span>
+        </div>
+      </div>
+
+      <!-- 1. DESKTOP VIEW -->
+      <div class="window glass-panel" id="view-desktop">
+        <div class="drop-overlay">
+          <svg class="icon" style="width:44px;height:44px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <strong style="font-size: 1.1rem;">Drop files onto Desktop to upload &amp; pin</strong>
+        </div>
+
+        <div class="window-header">
+          <div class="window-title">
+            <svg class="icon" style="color: var(--accent);" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <span>HomeNest Desktop</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button class="glass-btn danger" id="desktop-trash-btn" style="display: none;" onclick="moveSelectedDesktopToTrash()">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              <span id="desktop-trash-label">Move to Trash (0)</span>
+            </button>
+            <button class="glass-btn warm" onclick="openFolderModal(true)">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+              <span>New Folder</span>
+            </button>
+            <button class="glass-btn accent" onclick="document.getElementById('desktop-file-input').click()">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <span>Upload Files</span>
+            </button>
+            <input type="file" id="desktop-file-input" multiple style="display:none" onchange="uploadFilesToDesktop(this.files)" />
+          </div>
+        </div>
+
+        <div class="desktop-canvas" id="desktop-canvas">
+          <div class="desktop-trash-bin" id="desktop-trash-bin"
+               ondblclick="switchView('trash')"
+               oncontextmenu="openTrashBinContextMenu(event)"
+               title="Drag files/folders here to trash, or double-click to open Trash">
+            <div class="trash-tile">
+              <svg class="icon icon-lg" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            </div>
+            <div class="shortcut-label" id="desktop-trash-title">Trash Bin</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. NESTDRIVE WINDOW -->
+      <div class="window glass-panel" id="view-drive" style="display: none;">
+        <div class="drop-overlay">
+          <svg class="icon" style="width:44px;height:44px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <strong style="font-size: 1.1rem;">Drop files to upload &amp; scan into HomeNest/files/</strong>
+        </div>
+
+        <div class="window-header">
+          <div class="window-title">
+            <svg class="icon" style="color: var(--warm);" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <span>NestDrive — Family File Station</span>
+          </div>
+          <span style="font-size: 0.8rem; color: var(--muted);" id="scan-indicator">Scanner: Active</span>
+        </div>
+
+        <div class="drive-split">
+          <div class="drive-main">
+            <div class="action-bar">
+              <div class="breadcrumbs" id="breadcrumbs"></div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <button class="glass-btn danger" id="bulk-delete-btn" style="display: none;" onclick="moveSelectedDriveToTrash()">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  <span id="bulk-delete-label">Move to Trash</span>
+                </button>
+                <button class="glass-btn warm" onclick="openFolderModal(false)">
+                  <svg class="icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+                  <span>Add Folder</span>
+                </button>
+                <button class="glass-btn" onclick="loadDrive()">
+                  <svg class="icon" viewBox="0 0 24 24"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  <span>Refresh</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="drop-banner" onclick="document.getElementById('file-input').click()">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <svg class="icon" style="color: var(--warm);" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span style="font-size: 0.85rem; color: var(--warm); font-weight: 600;">Drag &amp; drop files here or click to upload</span>
+              </div>
+              <span style="font-size: 0.76rem; color: var(--muted);">Drag mouse to lasso-select · Double-click for Full Screen</span>
+              <input type="file" id="file-input" multiple style="display:none" onchange="handleFileSelect(this.files)" />
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 38px;"><input type="checkbox" class="glass-check" id="select-all" onclick="toggleSelectAll(this.checked)" /></th>
+                    <th>Name</th>
+                    <th>Member</th>
+                    <th>Size</th>
+                    <th>Safety Status</th>
+                    <th>Modified</th>
+                  </tr>
+                </thead>
+                <tbody id="drive-table"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <aside class="inspector-sidebar" id="inspector-panel">
+            <div class="inspector-header-bar">
+              <div class="inspector-title">
+                <svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Inspector</span>
+              </div>
+              <div class="preview-mode-switch" title="Choose default preview mode">
+                <button class="mode-pill active" id="mode-rightbar" onclick="setPreviewPreference('rightbar')">Rightbar</button>
+                <button class="mode-pill" id="mode-fullscreen" onclick="setPreviewPreference('fullscreen')">Full Screen</button>
+              </div>
+            </div>
+
+            <div id="inspector-content">
+              <div class="inspector-preview">
+                <div class="inspector-icon-badge">
+                  <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
+                <div style="font-size: 0.88rem; font-weight: 600;">No item selected</div>
+                <div style="font-size: 0.78rem; color: var(--muted);">Click any file to live-preview it in the rightbar, or switch to Full Screen mode.</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- 3. WORKING TERMINAL WINDOW -->
+      <div class="window glass-panel" id="view-terminal" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">
+            <svg class="icon" style="color: var(--purple);" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            <span>HomeNest Shell — NestDrive Files &amp; Internet Commands</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button class="glass-btn" onclick="runPresetCommand('help')">Help</button>
+            <button class="glass-btn danger" onclick="clearTerminalScreen()">Clear</button>
+          </div>
+        </div>
+
+        <div class="terminal-shell" onclick="document.getElementById('terminal-input').focus()">
+          <div class="terminal-toolbar" onclick="event.stopPropagation()">
+            <span style="font-size: 0.74rem; color: var(--muted);">Quick Run:</span>
+            <button class="term-chip" onclick="runPresetCommand('ls -la')">ls -la</button>
+            <button class="term-chip" onclick="runPresetCommand('tree')">tree</button>
+            <button class="term-chip" onclick="runPresetCommand('ping 1.1.1.1')">ping 1.1.1.1</button>
+            <button class="term-chip" onclick="runPresetCommand('curl -I https://example.com')">curl -I example.com</button>
+            <button class="term-chip" onclick="runPresetCommand('nslookup google.com')">nslookup google.com</button>
+          </div>
+
+          <div class="terminal-output" id="terminal-output">
+            <div class="term-entry">
+              <div class="term-response" style="color: #93c5fd;">HomeNest Shell v2.0 — Connected to NestDrive (/HomeNest/files) &amp; Network Stack.
+Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, rm, mv, open) and internet commands (curl, wget, ping, nslookup, dig, whois).</div>
+            </div>
+          </div>
+
+          <div class="term-input-bar" onclick="event.stopPropagation()">
+            <span class="term-prompt-label" id="terminal-prompt">
+              <span class="term-prompt-user">member@homenest</span>:<span class="term-prompt-path">/</span>$
+            </span>
+            <input type="text" id="terminal-input" autocomplete="off" spellcheck="false"
+                   placeholder="Type a command (e.g., ls -la, mkdir Notes, ping google.com, curl https://wttr.in?format=3)..."
+                   onkeydown="handleTerminalKeydown(event)" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. TRASH BIN WINDOW -->
+      <div class="window glass-panel" id="view-trash" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">
+            <svg class="icon" style="color: var(--danger);" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+            <span>Trash Bin — Deleted Folders &amp; Files</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <button class="glass-btn accent" id="trash-restore-btn" style="display: none;" onclick="restoreSelectedTrash()">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+              <span id="trash-restore-label">Restore (0)</span>
+            </button>
+            <button class="glass-btn danger" id="trash-perm-delete-btn" style="display: none;" onclick="deleteSelectedTrashPermanently()">
+              <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span id="trash-perm-label">Delete Forever (0)</span>
+            </button>
+            <button class="glass-btn danger" onclick="emptyAllTrash()">
+              <svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+              <span>Empty Trash</span>
+            </button>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 38px;"><input type="checkbox" class="glass-check" id="trash-select-all" onclick="toggleTrashSelectAll(this.checked)" /></th>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>Member</th>
+                  <th>Size</th>
+                  <th>Deleted At</th>
+                </tr>
+              </thead>
+              <tbody id="trash-table"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. SECURITY SETTINGS WINDOW -->
+      <div class="window glass-panel" id="view-security" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">
+            <svg class="icon" style="color: var(--emerald);" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <span>HomeNest Safety &amp; Sensitive Alerts</span>
+          </div>
+        </div>
+        <div class="window-body">
+          <div class="settings-box">
+            <div>
+              <h3 style="font-size: 1rem; margin-bottom: 5px;">Multi-Engine Sensitive Content Alerts</h3>
+              <p style="font-size: 0.83rem; color: var(--muted);" id="scan-desc">
+                Scans uploads saved in HomeNest/files/ using Python Threat/PII Engine, File Heuristics, and LM Studio (localhost:1234).
+              </p>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="scan-toggle" onchange="toggleScanSetting()" />
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <div class="engine-grid">
+            <div class="engine-card">
+              <h4>
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <span>app.py Threat &amp; PII Engine</span>
+              </h4>
+              <p>Flags threats, violence, self-harm language, SSNs, credit card digits, and leaked keys in text and .docx files.</p>
+            </div>
+            <div class="engine-card">
+              <h4>
+                <svg class="icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                <span>Script Heuristics</span>
+              </h4>
+              <p>Inspects file extensions and flags executable binaries or shell scripts (.exe, .bat, .sh, .ps1, .cmd).</p>
+            </div>
+            <div class="engine-card">
+              <h4>
+                <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/></svg>
+                <span>LM Studio Local AI</span>
+              </h4>
+              <p>Queries your local model on localhost:1234 for semantic safety classification without cloud uploads.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTIFICATION CENTER -->
+    <div id="notif-drawer" class="glass-panel">
+      <div class="notif-header">
+        <div class="window-title">
+          <svg class="icon" style="color: var(--warm);" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>Notifications</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px;">
+          <button class="glass-btn danger" onclick="clearAllNotifications()">
+            <svg class="icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+            <span>Clear All</span>
+          </button>
+          <button class="glass-btn" onclick="toggleNotifCenter()">
+            <svg class="icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="notif-list" id="notif-list"></div>
+    </div>
+  </div>
+
+  <!-- FULL-SCREEN FILE PREVIEW OVERLAY -->
+  <div id="fullscreen-preview">
+    <div class="fs-header">
+      <div class="window-title">
+        <svg class="icon" style="color: var(--accent);" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span id="fs-title">File Preview</span>
+        <span class="pill Clean" id="fs-badge">Clean</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="glass-btn" onclick="switchFullscreenToRightbar()">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+          <span>Dock to Rightbar</span>
+        </button>
+        <a class="glass-btn warm" id="fs-download" href="#" style="text-decoration:none;">
+          <svg class="icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Download</span>
+        </a>
+        <button class="glass-btn danger" onclick="closeFullscreenPreview()">
+          <svg class="icon" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          <span>Close (Esc)</span>
+        </button>
+      </div>
+    </div>
+    <div class="fs-body" id="fs-body"></div>
+  </div>
+
+  <!-- RIGHT-CLICK CONTEXT MENU -->
+  <div id="context-menu"></div>
+
+  <!-- ADD FOLDER MODAL -->
+  <div class="modal-backdrop" id="folder-modal">
+    <div class="modal-card glass-panel">
+      <h3>
+        <svg class="icon" style="color: var(--warm);" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        <span id="folder-modal-title">New Folder</span>
+      </h3>
+      <div class="field">
+        <label>Folder Name</label>
+        <input type="text" id="new-folder-name" placeholder="e.g., Family Photos, School" onkeydown="if(event.key==='Enter') submitNewFolder()" />
+      </div>
+      <div class="field">
+        <label>Folder Color</label>
+        <div class="color-swatches" id="color-swatches">
+          <div class="swatch active" data-color="#fbbf24" style="background: #fbbf24;"></div>
+          <div class="swatch" data-color="#38bdf8" style="background: #38bdf8;"></div>
+          <div class="swatch" data-color="#34d399" style="background: #34d399;"></div>
+          <div class="swatch" data-color="#fb7185" style="background: #fb7185;"></div>
+          <div class="swatch" data-color="#a78bfa" style="background: #a78bfa;"></div>
+          <div class="swatch" data-color="#22d3ee" style="background: #22d3ee;"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="glass-btn" onclick="closeFolderModal()">Cancel</button>
+        <button class="glass-btn warm" onclick="submitNewFolder()">Create Folder</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RENAME MODAL -->
+  <div class="modal-backdrop" id="rename-modal">
+    <div class="modal-card glass-panel">
+      <h3>
+        <svg class="icon" style="color: var(--accent);" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>Rename Item</span>
+      </h3>
+      <div class="field">
+        <label>New Name</label>
+        <input type="text" id="rename-input" onkeydown="if(event.key==='Enter') submitRename()" />
+      </div>
+      <div class="modal-actions">
+        <button class="glass-btn" onclick="closeRenameModal()">Cancel</button>
+        <button class="glass-btn warm" onclick="submitRename()">Save Name</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LASSO SELECTION MARQUEE -->
+  <div class="selection-marquee" id="selection-marquee"></div>
+
+  <script>
+    let authMode = 'login';
+    let currentUser = null;
+    let currentFolderId = null;
+    let driveFolders = [];
+    let driveFiles = [];
+    let selectedKeys = new Set();
+    let inspectedItem = null;
+    let selectedFolderColor = '#fbbf24';
+    let createFolderOnDesktop = false;
+    let renameTarget = null;
+    let previewPreference = 'rightbar';
+    let desktopShortcuts = [];
+    let selectedShortcutIds = new Set();
+    let trashFolders = [];
+    let trashFiles = [];
+    let selectedTrashKeys = new Set();
+
+    // TERMINAL STATE
+    let termCwdId = null;
+    let termCwdPath = '/';
+    let termHistory = [];
+    let termHistoryIdx = -1;
+
+    const marqueeEl = document.getElementById('selection-marquee');
+
+    const ICONS = {
+      home: `<svg class="icon" style="width:14px;height:14px;" viewBox="0 0 24 24"><path d="M3 10.5L12 3l9 7.5"/><path d="M5 9.5V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9.5"/></svg>`,
+      chevron: `<svg class="icon" style="width:13px;height:13px;opacity:0.5;" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>`,
+      file: `<svg class="icon" style="color: var(--accent);" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+      eye: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`,
+      maximize: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`,
+      desktop: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`,
+      clean: `<svg class="icon" style="width:13px;height:13px;" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>`,
+      flagged: `<svg class="icon" style="width:13px;height:13px;" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+      skipped: `<svg class="icon" style="width:13px;height:13px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+      download: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
+      rename: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
+      open: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
+      trash: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+      alertBell: `<svg class="icon" style="width:15px;height:15px;color:var(--danger);" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+      infoBell: `<svg class="icon" style="width:15px;height:15px;color:var(--warm);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
+    };
+
+    function folderSvg(color, size = 18) {
+      return `<svg style="width:${size}px;height:${size}px;fill:${color};stroke:${color};stroke-width:1.4;flex-shrink:0;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+    }
+
+    // AUTH
+    function switchAuthTab(mode) {
+      authMode = mode;
+      document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+      document.getElementById('tab-signup').classList.toggle('active', mode === 'signup');
+      document.getElementById('role-field').style.display = mode === 'signup' ? 'block' : 'none';
+      document.getElementById('auth-submit').innerText = mode === 'login' ? 'Sign In to HomeNest' : 'Create Family Account';
+      document.getElementById('auth-error').innerText = '';
+    }
+
+    async function submitAuth() {
+      const username = document.getElementById('auth-user').value;
+      const password = document.getElementById('auth-pass').value;
+      const role = document.getElementById('auth-role').value;
+      const endpoint = authMode === 'login' ? '/api/login' : '/api/signup';
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, role })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        document.getElementById('auth-error').innerText = data.error || 'Authentication failed';
+        return;
+      }
+      initDesktop();
+    }
+
+    async function initDesktop() {
+      const res = await fetch('/api/me');
+      if (!res.ok) return;
+      currentUser = await res.json();
+
+      document.getElementById('auth-screen').style.display = 'none';
+      document.getElementById('desktop').style.display = 'flex';
+      document.getElementById('user-badge').innerText = `${currentUser.username} · ${currentUser.role}`;
+      updateTerminalPrompt();
+
+      const toggle = document.getElementById('scan-toggle');
+      toggle.checked = currentUser.sensitive_scan === 1;
+      if (currentUser.role === 'kid') {
+        toggle.disabled = true;
+        document.getElementById('scan-desc').innerText = 'Locked ON for Kid accounts. Monitored by Python Engine & LM Studio.';
+      } else {
+        toggle.disabled = false;
+      }
+
+      updateScanIndicator();
+      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), loadNotifications()]);
+    }
+
+    function updateScanIndicator() {
+      const active = currentUser.role === 'kid' || currentUser.sensitive_scan === 1;
+      document.getElementById('scan-indicator').innerText = active
+        ? 'Scanner: ON (Python + LM Studio)'
+        : 'Scanner: OFF';
+    }
+
+    async function toggleScanSetting() {
+      const enabled = document.getElementById('scan-toggle').checked;
+      const res = await fetch('/api/settings/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        currentUser.sensitive_scan = data.sensitive_scan;
+        updateScanIndicator();
+        loadNotifications();
+      }
+    }
+
+    // --- TERMINAL LOGIC ---
+    function updateTerminalPrompt() {
+      const user = currentUser ? currentUser.username : 'member';
+      document.getElementById('terminal-prompt').innerHTML =
+        `<span class="term-prompt-user">${escapeHtml(user)}@homenest</span>:<span class="term-prompt-path">${escapeHtml(termCwdPath)}</span>$`;
+    }
+
+    function appendTerminalEntry(cmdText, outputText, pathAtRun) {
+      const outEl = document.getElementById('terminal-output');
+      const user = currentUser ? currentUser.username : 'member';
+      const div = document.createElement('div');
+      div.className = 'term-entry';
+      div.innerHTML = `
+        <div class="term-cmd-line">
+          <span><span class="term-prompt-user">${escapeHtml(user)}@homenest</span>:<span class="term-prompt-path">${escapeHtml(pathAtRun)}</span>$</span>
+          <span>${escapeHtml(cmdText)}</span>
+        </div>
+        ${outputText ? `<div class="term-response">${escapeHtml(outputText)}</div>` : ''}
+      `;
+      outEl.appendChild(div);
+      outEl.scrollTop = outEl.scrollHeight;
+    }
+
+    function clearTerminalScreen() {
+      document.getElementById('terminal-output').innerHTML = '';
+      document.getElementById('terminal-input').focus();
+    }
+
+    async function executeTerminalCommand(cmdText) {
+      const trimmed = cmdText.trim();
+      if (!trimmed) return;
+
+      termHistory.push(trimmed);
+      termHistoryIdx = termHistory.length;
+
+      const pathAtRun = termCwdPath;
+      const inputEl = document.getElementById('terminal-input');
+      inputEl.value = '';
+      inputEl.disabled = true;
+
+      try {
+        const res = await fetch('/api/terminal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: trimmed, cwd_id: termCwdId })
+        });
+        const data = await res.json();
+
+        if (data.clear) {
+          clearTerminalScreen();
+        } else {
+          appendTerminalEntry(trimmed, data.output || '', pathAtRun);
+        }
+
+        termCwdId = data.cwd_id ?? null;
+        termCwdPath = data.cwd_path || '/';
+        updateTerminalPrompt();
+
+        if (data.refresh) {
+          await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), loadNotifications()]);
+        }
+        if (data.open_file_id) {
+          await openFullscreenPreview(data.open_file_id);
+        }
+      } catch (err) {
+        appendTerminalEntry(trimmed, `Terminal error: ${err.message}`, pathAtRun);
+      } finally {
+        inputEl.disabled = false;
+        inputEl.focus();
+      }
+    }
+
+    function runPresetCommand(cmd) {
+      switchView('terminal');
+      executeTerminalCommand(cmd);
+    }
+
+    async function handleTerminalKeydown(e) {
+      const inputEl = e.target;
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        await executeTerminalCommand(inputEl.value);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (termHistoryIdx > 0) {
+          termHistoryIdx--;
+          inputEl.value = termHistory[termHistoryIdx];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (termHistoryIdx < termHistory.length - 1) {
+          termHistoryIdx++;
+          inputEl.value = termHistory[termHistoryIdx];
+        } else {
+          termHistoryIdx = termHistory.length;
+          inputEl.value = '';
+        }
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const val = inputEl.value;
+        const parts = val.split(/\s+/);
+        const partial = parts[parts.length - 1] || '';
+        const candidates = [
+          'help', 'ls', 'cd', 'pwd', 'tree', 'mkdir', 'touch', 'cat', 'rm', 'mv', 'find', 'grep', 'open', 'desktop', 'clear',
+          'curl', 'wget', 'ping', 'nslookup', 'dig', 'whois', 'traceroute', 'ifconfig', 'ipconfig', 'python3',
+          ...driveFolders.map(f => f.name),
+          ...driveFiles.map(f => f.filename)
+        ];
+        const match = candidates.find(c => c.toLowerCase().startsWith(partial.toLowerCase()) && c !== partial);
+        if (match) {
+          parts[parts.length - 1] = match.includes(' ') ? `"${match}"` : match;
+          inputEl.value = parts.join(' ');
+        }
+      }
+    }
+
+    // PREVIEW MODE PREFERENCE
+    function setPreviewPreference(mode) {
+      previewPreference = mode;
+      document.getElementById('mode-rightbar').classList.toggle('active', mode === 'rightbar');
+      document.getElementById('mode-fullscreen').classList.toggle('active', mode === 'fullscreen');
+
+      if (mode === 'fullscreen' && inspectedItem && inspectedItem.type === 'file') {
+        openFullscreenPreview(inspectedItem.data.id);
+      } else if (mode === 'rightbar') {
+        closeFullscreenPreview();
+      }
+    }
+
+    function switchFullscreenToRightbar() {
+      setPreviewPreference('rightbar');
+    }
+
+    // DRAG AND DROP UPLOAD
+    function attachDropZone(windowEl, onDropFiles) {
+      let dragCounter = 0;
+      windowEl.addEventListener('dragenter', (e) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        dragCounter++;
+        windowEl.classList.add('dragging-over');
+      });
+      windowEl.addEventListener('dragover', (e) => {
+        if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+      });
+      windowEl.addEventListener('dragleave', (e) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+          dragCounter = 0;
+          windowEl.classList.remove('dragging-over');
+        }
+      });
+      windowEl.addEventListener('drop', (e) => {
+        if (!e.dataTransfer.types.includes('Files')) return;
+        e.preventDefault();
+        dragCounter = 0;
+        windowEl.classList.remove('dragging-over');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          onDropFiles(e.dataTransfer.files);
+        }
+      });
+    }
+
+    attachDropZone(document.getElementById('view-drive'), (files) => handleFileSelect(files, false));
+    attachDropZone(document.getElementById('view-desktop'), (files) => uploadFilesToDesktop(files));
+
+    async function handleFileSelect(fileList, pinToDesktop = false) {
+      if (!fileList || !fileList.length) return;
+      const formData = new FormData();
+      for (const file of fileList) {
+        formData.append('file', file);
+      }
+      if (!pinToDesktop && currentFolderId !== null) {
+        formData.append('folder_id', currentFolderId);
+      }
+      if (pinToDesktop) {
+        formData.append('pin_desktop', '1');
+      }
+
+      document.getElementById('scan-indicator').innerText = `Uploading & scanning ${fileList.length} file(s)...`;
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        document.getElementById('file-input').value = '';
+        document.getElementById('desktop-file-input').value = '';
+        updateScanIndicator();
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          alert(err.error || 'Upload failed.');
+          return;
+        }
+
+        const data = await res.json();
+        await Promise.all([loadDrive(), loadDesktopShortcuts(), loadNotifications()]);
+        if (data.uploaded && data.uploaded.some(u => u.scan_status === 'Flagged')) {
+          toggleNotifCenter(false, true);
+        }
+      } catch (err) {
+        updateScanIndicator();
+        alert('Upload error: ' + err.message);
+      }
+    }
+
+    async function uploadFilesToDesktop(fileList) {
+      await handleFileSelect(fileList, true);
+    }
+
+    function resetInspector() {
+      inspectedItem = null;
+      document.getElementById('inspector-content').innerHTML = `
+        <div class="inspector-preview">
+          <div class="inspector-icon-badge">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div style="font-size: 0.88rem; font-weight: 600;">No item selected</div>
+          <div style="font-size: 0.78rem; color: var(--muted);">Click any file to live-preview it in the rightbar, or switch to Full Screen mode.</div>
+        </div>
+      `;
+    }
+
+    // LOAD FOLDERS & FILES IN NESTDRIVE
+    async function loadDrive(folderId = currentFolderId) {
+      currentFolderId = folderId;
+      selectedKeys.clear();
+      resetInspector();
+      document.getElementById('select-all').checked = false;
+      updateBulkToolbar();
+
+      const query = folderId !== null ? `?folder_id=${folderId}` : '';
+      const res = await fetch(`/api/drive${query}`);
+      if (!res.ok) return;
+      const data = await res.json();
+
+      driveFolders = data.folders;
+      driveFiles = data.files;
+
+      const bc = document.getElementById('breadcrumbs');
+      let bcHtml = `<span class="crumb" onclick="loadDrive(null)">${ICONS.home} HomeNest/files</span>`;
+      data.breadcrumbs.forEach(b => {
+        bcHtml += `${ICONS.chevron}<span class="crumb" onclick="loadDrive(${b.id})">${escapeHtml(b.name)}</span>`;
+      });
+      bc.innerHTML = bcHtml;
+
+      renderDriveTable();
+    }
+
+    function renderDriveTable() {
+      const tbody = document.getElementById('drive-table');
+      let rows = '';
+
+      driveFolders.forEach(folder => {
+        const key = `folder:${folder.id}`;
+        const isChecked = selectedKeys.has(key);
+        rows += `
+          <tr data-key="${key}" data-folder-id="${folder.id}" class="${isChecked ? 'selected' : ''}"
+              onclick="selectSingleItem('folder', ${folder.id})"
+              ondblclick="loadDrive(${folder.id})"
+              oncontextmenu="openContextMenu(event, 'folder', ${folder.id})">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" class="glass-check" ${isChecked ? 'checked' : ''} onchange="toggleCheck('folder', ${folder.id}, this.checked)" />
+            </td>
+            <td>
+              <div class="file-cell">
+                ${folderSvg(folder.color, 19)}
+                <strong>${escapeHtml(folder.name)}</strong>
+              </div>
+            </td>
+            <td>${escapeHtml(folder.owner)}</td>
+            <td>—</td>
+            <td><span class="pill Folder">Folder</span></td>
+            <td>${folder.created_at}</td>
+          </tr>
+        `;
+      });
+
+      driveFiles.forEach(f => {
+        const key = `file:${f.id}`;
+        const isChecked = selectedKeys.has(key);
+        const statusIcon = f.scan_status === 'Clean' ? ICONS.clean : (f.scan_status === 'Flagged' ? ICONS.flagged : ICONS.skipped);
+        rows += `
+          <tr data-key="${key}" class="${isChecked ? 'selected' : ''}"
+              onclick="selectSingleItem('file', ${f.id}, true)"
+              ondblclick="openFullscreenPreview(${f.id})"
+              oncontextmenu="openContextMenu(event, 'file', ${f.id})">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" class="glass-check" ${isChecked ? 'checked' : ''} onchange="toggleCheck('file', ${f.id}, this.checked)" />
+            </td>
+            <td>
+              <div class="file-cell">
+                ${ICONS.file}
+                <strong>${escapeHtml(f.filename)}</strong>
+              </div>
+            </td>
+            <td>${escapeHtml(f.owner)}</td>
+            <td>${(f.size_bytes / 1024).toFixed(1)} KB</td>
+            <td><span class="pill ${f.scan_status}">${statusIcon} ${f.scan_status}</span></td>
+            <td>${f.uploaded_at}</td>
+          </tr>
+        `;
+      });
+
+      if (!rows) {
+        rows = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:26px;">This folder is empty. Drag files here or click Add Folder.</td></tr>`;
+      }
+      tbody.innerHTML = rows;
+    }
+
+    function selectSingleItem(type, id, respectPreference = false) {
+      selectedKeys.clear();
+      selectedKeys.add(`${type}:${id}`);
+      document.getElementById('select-all').checked = false;
+      updateBulkToolbar();
+      renderDriveTable();
+      inspectItem(type, id);
+
+      if (respectPreference && type === 'file' && previewPreference === 'fullscreen') {
+        openFullscreenPreview(id);
+      }
+    }
+
+    function toggleCheck(type, id, checked) {
+      const key = `${type}:${id}`;
+      if (checked) {
+        selectedKeys.add(key);
+        inspectItem(type, id);
+      } else {
+        selectedKeys.delete(key);
+        if (selectedKeys.size === 0) {
+          resetInspector();
+        }
+      }
+      updateBulkToolbar();
+      renderDriveTable();
+    }
+
+    function toggleSelectAll(checked) {
+      selectedKeys.clear();
+      if (checked) {
+        driveFolders.forEach(f => selectedKeys.add(`folder:${f.id}`));
+        driveFiles.forEach(f => selectedKeys.add(`file:${f.id}`));
+      } else {
+        resetInspector();
+      }
+      updateBulkToolbar();
+      renderDriveTable();
+    }
+
+    function updateBulkToolbar() {
+      const btn = document.getElementById('bulk-delete-btn');
+      if (selectedKeys.size > 0) {
+        btn.style.display = 'inline-flex';
+        document.getElementById('bulk-delete-label').innerText = `Move to Trash (${selectedKeys.size})`;
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+
+    function getFileCategory(filename) {
+      const ext = filename.includes('.') ? filename.split('.').pop().toLowerCase() : '';
+      if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp'].includes(ext)) return 'image';
+      if (ext === 'pdf') return 'pdf';
+      if (['mp4', 'webm', 'mov'].includes(ext)) return 'video';
+      if (['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return 'audio';
+      if (['txt', 'md', 'csv', 'json', 'py', 'js', 'html', 'css', 'xml', 'log', 'yaml', 'yml', 'ini'].includes(ext)) return 'text';
+      return 'other';
+    }
+
+    async function renderPreviewMarkup(file, isFullscreen = false) {
+      const cat = getFileCategory(file.filename);
+      const url = `/api/preview/${file.id}`;
+
+      if (cat === 'image') return `<img src="${url}" alt="${escapeHtml(file.filename)}" />`;
+      if (cat === 'pdf') return `<iframe src="${url}#toolbar=0"></iframe>`;
+      if (cat === 'video') return `<video src="${url}" controls></video>`;
+      if (cat === 'audio') return `<audio src="${url}" controls></audio>`;
+      if (cat === 'text') {
+        try {
+          const resp = await fetch(url);
+          const rawText = await resp.text();
+          const clipped = isFullscreen ? rawText : rawText.slice(0, 3500);
+          return `<pre>${escapeHtml(clipped || '(Empty text file)')}</pre>`;
+        } catch {
+          return `<div style="color:var(--muted);font-size:0.8rem;">Unable to load text preview.</div>`;
+        }
+      }
+
+      return `
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:0.82rem;">
+          <div style="margin-bottom:8px;color:var(--accent);">${ICONS.file}</div>
+          <div>No inline preview for this format.</div>
+          <div style="font-size:0.74rem;margin-top:4px;">Click Download to open locally.</div>
+        </div>
+      `;
+    }
+
+    async function inspectItem(type, id) {
+      const container = document.getElementById('inspector-content');
+      if (type === 'folder') {
+        const folder = driveFolders.find(f => f.id === id);
+        if (!folder) return;
+        inspectedItem = { type: 'folder', data: folder };
+        container.innerHTML = `
+          <div class="inspector-preview">
+            <div class="inspector-icon-badge" style="background: rgba(255,255,255,0.08); border-color: ${folder.color};">
+              ${folderSvg(folder.color, 28)}
+            </div>
+            <div style="font-size: 0.94rem; font-weight: 700; word-break: break-word;">${escapeHtml(folder.name)}</div>
+            <span class="pill Folder">Color Tag: ${folder.color}</span>
+          </div>
+          <div class="inspector-meta">
+            <div class="meta-row"><span class="meta-label">Type</span><span class="meta-val">NestDrive Folder</span></div>
+            <div class="meta-row"><span class="meta-label">Created By</span><span class="meta-val">${escapeHtml(folder.owner)}</span></div>
+            <div class="meta-row"><span class="meta-label">Created At</span><span class="meta-val">${folder.created_at}</span></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:4px;">
+            <button class="glass-btn warm" style="justify-content:center;" onclick="loadDrive(${folder.id})">${ICONS.open} Open Folder</button>
+            <button class="glass-btn" style="justify-content:center;" onclick="pinItemToDesktop('folder', ${folder.id})">${ICONS.desktop} Send to Desktop</button>
+            <button class="glass-btn" style="justify-content:center;" onclick="openRenameModal('folder', ${folder.id})">${ICONS.rename} Rename Folder</button>
+            <button class="glass-btn danger" style="justify-content:center;" onclick="moveSingleToTrash('folder', ${folder.id})">${ICONS.trash} Move to Trash</button>
+          </div>
+        `;
+      } else {
+        const file = driveFiles.find(f => f.id === id);
+        if (!file) return;
+        inspectedItem = { type: 'file', data: file };
+        const ext = file.filename.includes('.') ? file.filename.split('.').pop().toUpperCase() : 'FILE';
+
+        container.innerHTML = `
+          <div class="live-preview-stage" id="rightbar-preview-stage">
+            <span style="font-size:0.78rem;color:var(--muted);">Loading live preview...</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <strong style="font-size:0.88rem; word-break:break-word;">${escapeHtml(file.filename)}</strong>
+            <span class="pill ${file.scan_status}">${file.scan_status}</span>
+          </div>
+          <div class="inspector-meta">
+            <div class="meta-row"><span class="meta-label">Format</span><span class="meta-val">${ext} File</span></div>
+            <div class="meta-row"><span class="meta-label">Size</span><span class="meta-val">${(file.size_bytes / 1024).toFixed(2)} KB</span></div>
+            <div class="meta-row"><span class="meta-label">Member</span><span class="meta-val">${escapeHtml(file.owner)}</span></div>
+            <div class="meta-row"><span class="meta-label">Uploaded</span><span class="meta-val">${file.uploaded_at}</span></div>
+          </div>
+          <div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin-bottom: 5px; font-weight: 700;">Safety Scan Report</div>
+            <div class="scan-note-box">${escapeHtml(file.scan_details)}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-top:2px;">
+            <button class="glass-btn accent" style="justify-content:center;" onclick="openFullscreenPreview(${file.id})">${ICONS.maximize} Expand Full Screen</button>
+            <button class="glass-btn" style="justify-content:center;" onclick="pinItemToDesktop('file', ${file.id})">${ICONS.desktop} Send to Desktop</button>
+            <a class="glass-btn warm" style="justify-content:center; text-decoration:none;" href="/api/download/${file.id}">${ICONS.download} Download File</a>
+            <button class="glass-btn" style="justify-content:center;" onclick="openRenameModal('file', ${file.id})">${ICONS.rename} Rename File</button>
+            <button class="glass-btn danger" style="justify-content:center;" onclick="moveSingleToTrash('file', ${file.id})">${ICONS.trash} Move to Trash</button>
+          </div>
+        `;
+
+        const stage = document.getElementById('rightbar-preview-stage');
+        if (stage) {
+          stage.innerHTML = await renderPreviewMarkup(file, false);
+        }
+      }
+    }
+
+    // FULL-SCREEN PREVIEW OVERLAY
+    async function openFullscreenPreview(fileId) {
+      let file = driveFiles.find(f => f.id === fileId);
+      if (!file) {
+        const deskItem = desktopShortcuts.find(s => s.item_type === 'file' && s.item_id === fileId);
+        if (deskItem) {
+          file = { id: deskItem.item_id, filename: deskItem.name, scan_status: deskItem.scan_status || 'Clean' };
+        }
+      }
+      if (!file) {
+        const res = await fetch('/api/drive');
+        if (res.ok) {
+          const data = await res.json();
+          file = data.files.find(f => f.id === fileId);
+        }
+      }
+      if (!file) return;
+
+      document.getElementById('fs-title').innerText = file.filename;
+      const badge = document.getElementById('fs-badge');
+      badge.className = `pill ${file.scan_status}`;
+      badge.innerText = file.scan_status;
+      document.getElementById('fs-download').href = `/api/download/${file.id}`;
+
+      const body = document.getElementById('fs-body');
+      body.innerHTML = `<span style="color:var(--muted);">Loading full-screen preview...</span>`;
+      document.getElementById('fullscreen-preview').classList.add('open');
+
+      body.innerHTML = await renderPreviewMarkup(file, true);
+    }
+
+    function closeFullscreenPreview() {
+      document.getElementById('fullscreen-preview').classList.remove('open');
+      document.getElementById('fs-body').innerHTML = '';
+    }
+
+    // DESKTOP VIEW
+    async function loadDesktopShortcuts() {
+      const res = await fetch('/api/desktop');
+      if (!res.ok) return;
+      desktopShortcuts = await res.json();
+      renderDesktopShortcuts();
+    }
+
+    async function pinItemToDesktop(itemType, itemId) {
+      await fetch('/api/desktop', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_type: itemType, item_id: itemId })
+      });
+      await loadDesktopShortcuts();
+      switchView('desktop');
+    }
+
+    function updateDesktopSelectionUI() {
+      document.querySelectorAll('.desktop-shortcut').forEach(el => {
+        const sid = Number(el.dataset.shortcutId);
+        el.classList.toggle('selected', selectedShortcutIds.has(sid));
+      });
+      const btn = document.getElementById('desktop-trash-btn');
+      if (btn) {
+        btn.style.display = selectedShortcutIds.size > 0 ? 'inline-flex' : 'none';
+        document.getElementById('desktop-trash-label').innerText = `Move to Trash (${selectedShortcutIds.size})`;
+      }
+    }
+
+    async function moveSelectedDesktopToTrash() {
+      const items = [];
+      for (const sid of selectedShortcutIds) {
+        const sc = desktopShortcuts.find(s => s.shortcut_id === sid);
+        if (sc) items.push({ type: sc.item_type, id: sc.item_id });
+      }
+      if (!items.length) return;
+      await fetch('/api/trash/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+      selectedShortcutIds.clear();
+      updateDesktopSelectionUI();
+      await Promise.all([loadDesktopShortcuts(), loadDrive(), loadTrash()]);
+    }
+
+    function renderDesktopShortcuts() {
+      const canvas = document.getElementById('desktop-canvas');
+      canvas.querySelectorAll('.desktop-shortcut, .desktop-empty-hint').forEach(el => el.remove());
+
+      if (!desktopShortcuts.length) {
+        const hint = document.createElement('div');
+        hint.className = 'desktop-empty-hint';
+        hint.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:0.88rem;pointer-events:none;text-align:center;padding:24px;';
+        hint.innerText = 'Create a Folder, upload Files, or right-click any item in NestDrive → Send to Desktop.';
+        canvas.appendChild(hint);
+        return;
+      }
+
+      const trashBinEl = document.getElementById('desktop-trash-bin');
+
+      desktopShortcuts.forEach(item => {
+        const isFolder = item.item_type === 'folder';
+        const el = document.createElement('div');
+        el.className = `desktop-shortcut ${selectedShortcutIds.has(item.shortcut_id) ? 'selected' : ''}`;
+        el.dataset.shortcutId = item.shortcut_id;
+        el.dataset.itemType = item.item_type;
+        el.dataset.itemId = item.item_id;
+        el.style.left = `${item.pos_x}px`;
+        el.style.top = `${item.pos_y}px`;
+
+        el.innerHTML = `
+          <div class="shortcut-tile ${isFolder ? 'folder-tile' : ''}" style="${isFolder ? `border-color:${item.color};` : ''}">
+            ${isFolder
+              ? folderSvg(item.color || '#fbbf24', 28)
+              : `<svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`
+            }
+          </div>
+          <div class="shortcut-label">${escapeHtml(item.name)}</div>
+        `;
+
+        el.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation();
+
+          if (!selectedShortcutIds.has(item.shortcut_id) && !e.shiftKey && !e.metaKey && !e.ctrlKey) {
+            selectedShortcutIds.clear();
+          }
+          selectedShortcutIds.add(item.shortcut_id);
+          updateDesktopSelectionUI();
+
+          const startX = e.clientX - item.pos_x;
+          const startY = e.clientY - item.pos_y;
+          let moved = false;
+
+          const onMove = (ev) => {
+            moved = true;
+            item.pos_x = Math.max(8, ev.clientX - startX);
+            item.pos_y = Math.max(8, ev.clientY - startY);
+            el.style.left = `${item.pos_x}px`;
+            el.style.top = `${item.pos_y}px`;
+
+            const tr = trashBinEl.getBoundingClientRect();
+            const overTrash = ev.clientX >= tr.left && ev.clientX <= tr.right && ev.clientY >= tr.top && ev.clientY <= tr.bottom;
+            trashBinEl.classList.toggle('trash-drop-active', overTrash);
+
+            document.querySelectorAll('.desktop-shortcut').forEach(other => {
+              if (other === el || other.dataset.itemType !== 'folder' || isFolder) {
+                other.classList.remove('drop-hover');
+                return;
+              }
+              const r = other.getBoundingClientRect();
+              const overFolder = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+              other.classList.toggle('drop-hover', overFolder);
+            });
+          };
+
+          const onUp = async (ev) => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            trashBinEl.classList.remove('trash-drop-active');
+            document.querySelectorAll('.desktop-shortcut').forEach(o => o.classList.remove('drop-hover'));
+
+            if (!moved) return;
+
+            const tr = trashBinEl.getBoundingClientRect();
+            const droppedOnTrash = ev.clientX >= tr.left && ev.clientX <= tr.right && ev.clientY >= tr.top && ev.clientY <= tr.bottom;
+            if (droppedOnTrash) {
+              await moveSelectedDesktopToTrash();
+              return;
+            }
+
+            if (!isFolder) {
+              const folderEls = Array.from(document.querySelectorAll('.desktop-shortcut[data-item-type="folder"]'));
+              const targetFolder = folderEls.find(fEl => {
+                const r = fEl.getBoundingClientRect();
+                return ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+              });
+              if (targetFolder) {
+                const targetFolderId = Number(targetFolder.dataset.itemId);
+                await fetch(`/api/files/${item.item_id}`, {
+                  method: 'PATCH',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ folder_id: targetFolderId })
+                });
+                await fetch(`/api/desktop/${item.shortcut_id}`, { method: 'DELETE' });
+                selectedShortcutIds.delete(item.shortcut_id);
+                updateDesktopSelectionUI();
+                await Promise.all([loadDesktopShortcuts(), loadDrive()]);
+                return;
+              }
+            }
+
+            await fetch(`/api/desktop/${item.shortcut_id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pos_x: item.pos_x, pos_y: item.pos_y })
+            });
+          };
+
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+
+        el.addEventListener('dblclick', (e) => {
+          e.stopPropagation();
+          if (isFolder) {
+            switchView('drive');
+            loadDrive(item.item_id);
+          } else {
+            openFullscreenPreview(item.item_id);
+          }
+        });
+
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          selectedShortcutIds.clear();
+          selectedShortcutIds.add(item.shortcut_id);
+          updateDesktopSelectionUI();
+
+          if (isFolder) {
+            ctxMenu.innerHTML = `
+              <div class="ctx-item" onclick="switchView('drive'); loadDrive(${item.item_id}); closeContextMenu();">${ICONS.open} Open Folder</div>
+              <div class="ctx-item" onclick="openRenameModal('folder', ${item.item_id}, '${escapeHtml(item.name)}'); closeContextMenu();">${ICONS.rename} Rename</div>
+              <div class="ctx-item" onclick="removeShortcutOnly(${item.shortcut_id}); closeContextMenu();">${ICONS.desktop} Remove from Desktop</div>
+              <div class="ctx-divider"></div>
+              <div class="ctx-item danger" onclick="moveSingleToTrash('folder', ${item.item_id}); closeContextMenu();">${ICONS.trash} Move to Trash</div>
+            `;
+          } else {
+            ctxMenu.innerHTML = `
+              <div class="ctx-item" onclick="openFullscreenPreview(${item.item_id}); closeContextMenu();">${ICONS.maximize} Preview File</div>
+              <div class="ctx-item" onclick="window.location='/api/download/${item.item_id}'; closeContextMenu();">${ICONS.download} Download</div>
+              <div class="ctx-item" onclick="openRenameModal('file', ${item.item_id}, '${escapeHtml(item.name)}'); closeContextMenu();">${ICONS.rename} Rename</div>
+              <div class="ctx-item" onclick="removeShortcutOnly(${item.shortcut_id}); closeContextMenu();">${ICONS.desktop} Remove from Desktop</div>
+              <div class="ctx-divider"></div>
+              <div class="ctx-item danger" onclick="moveSingleToTrash('file', ${item.item_id}); closeContextMenu();">${ICONS.trash} Move to Trash</div>
+            `;
+          }
+          showContextMenuAt(e.clientX, e.clientY);
+        });
+
+        canvas.appendChild(el);
+      });
+    }
+
+    async function removeShortcutOnly(shortcutId) {
+      await fetch(`/api/desktop/${shortcutId}`, { method: 'DELETE' });
+      selectedShortcutIds.delete(shortcutId);
+      updateDesktopSelectionUI();
+      loadDesktopShortcuts();
+    }
+
+    function openTrashBinContextMenu(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      ctxMenu.innerHTML = `
+        <div class="ctx-item" onclick="switchView('trash'); closeContextMenu();">${ICONS.open} Open Trash Bin</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item danger" onclick="emptyAllTrash(); closeContextMenu();">${ICONS.trash} Empty Trash</div>
+      `;
+      showContextMenuAt(e.clientX, e.clientY);
+    }
+
+    // LASSO SELECTION FOR DESKTOP CANVAS
+    const desktopCanvas = document.getElementById('desktop-canvas');
+    desktopCanvas.addEventListener('mousedown', (e) => {
+      if (e.button !== 0 || e.target.closest('.desktop-shortcut') || e.target.closest('.desktop-trash-bin')) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      if (!e.shiftKey && !e.metaKey && !e.ctrlKey) {
+        selectedShortcutIds.clear();
+        updateDesktopSelectionUI();
+      }
+
+      marqueeEl.style.left = `${startX}px`;
+      marqueeEl.style.top = `${startY}px`;
+      marqueeEl.style.width = '0px';
+      marqueeEl.style.height = '0px';
+      marqueeEl.style.display = 'block';
+
+      const onMouseMove = (ev) => {
+        const left = Math.min(startX, ev.clientX);
+        const top = Math.min(startY, ev.clientY);
+        const width = Math.abs(ev.clientX - startX);
+        const height = Math.abs(ev.clientY - startY);
+
+        marqueeEl.style.left = `${left}px`;
+        marqueeEl.style.top = `${top}px`;
+        marqueeEl.style.width = `${width}px`;
+        marqueeEl.style.height = `${height}px`;
+
+        const box = { left, top, right: left + width, bottom: top + height };
+        document.querySelectorAll('.desktop-shortcut').forEach(el => {
+          const r = el.getBoundingClientRect();
+          const intersects = !(r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom);
+          const sid = Number(el.dataset.shortcutId);
+          if (intersects) {
+            selectedShortcutIds.add(sid);
+          } else if (!ev.shiftKey && !ev.metaKey && !ev.ctrlKey) {
+            selectedShortcutIds.delete(sid);
+          }
+        });
+        updateDesktopSelectionUI();
+      };
+
+      const onMouseUp = () => {
+        marqueeEl.style.display = 'none';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    desktopCanvas.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.desktop-shortcut') || e.target.closest('.desktop-trash-bin')) return;
+      e.preventDefault();
+      ctxMenu.innerHTML = `
+        <div class="ctx-item" onclick="openFolderModal(true); closeContextMenu();">${ICONS.open} New Folder on Desktop</div>
+        <div class="ctx-item" onclick="document.getElementById('desktop-file-input').click(); closeContextMenu();">${ICONS.download} Upload Files to Desktop</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item" onclick="switchView('trash'); closeContextMenu();">${ICONS.trash} Open Trash Bin</div>
+      `;
+      showContextMenuAt(e.clientX, e.clientY);
+    });
+
+    // LASSO SELECTION FOR NESTDRIVE TABLE
+    const driveMain = document.querySelector('.drive-main');
+    driveMain.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest('button') || e.target.closest('input') || e.target.closest('.drop-banner') || e.target.closest('.crumb')) return;
+
+      const startX = e.clientX;
+      const startY = e.clientY;
+      let draggingMarquee = false;
+
+      const onMouseMove = (ev) => {
+        const dx = Math.abs(ev.clientX - startX);
+        const dy = Math.abs(ev.clientY - startY);
+        if (!draggingMarquee && dx < 6 && dy < 6) return;
+
+        draggingMarquee = true;
+        marqueeEl.style.display = 'block';
+
+        const left = Math.min(startX, ev.clientX);
+        const top = Math.min(startY, ev.clientY);
+        const width = Math.abs(ev.clientX - startX);
+        const height = Math.abs(ev.clientY - startY);
+
+        marqueeEl.style.left = `${left}px`;
+        marqueeEl.style.top = `${top}px`;
+        marqueeEl.style.width = `${width}px`;
+        marqueeEl.style.height = `${height}px`;
+
+        const box = { left, top, right: left + width, bottom: top + height };
+        selectedKeys.clear();
+
+        document.querySelectorAll('#drive-table tr[data-key]').forEach(row => {
+          const r = row.getBoundingClientRect();
+          const intersects = !(r.right < box.left || r.left > box.right || r.bottom < box.top || r.top > box.bottom);
+          if (intersects) {
+            selectedKeys.add(row.dataset.key);
+          }
+        });
+
+        updateBulkToolbar();
+        renderDriveTable();
+      };
+
+      const onMouseUp = () => {
+        marqueeEl.style.display = 'none';
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+
+        if (draggingMarquee) {
+          if (selectedKeys.size === 1) {
+            const [type, id] = [...selectedKeys][0].split(':');
+            inspectItem(type, Number(id));
+          } else if (selectedKeys.size === 0) {
+            resetInspector();
+          }
+        } else if (!e.target.closest('tr')) {
+          selectedKeys.clear();
+          document.getElementById('select-all').checked = false;
+          updateBulkToolbar();
+          renderDriveTable();
+          resetInspector();
+        }
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    });
+
+    // RIGHT-CLICK CONTEXT MENU
+    const ctxMenu = document.getElementById('context-menu');
+
+    function showContextMenuAt(x, y) {
+      ctxMenu.style.display = 'flex';
+      const menuWidth = 225;
+      const menuHeight = 255;
+      const posX = x + menuWidth > window.innerWidth ? x - menuWidth : x;
+      const posY = y + menuHeight > window.innerHeight ? y - menuHeight : y;
+      ctxMenu.style.left = `${posX}px`;
+      ctxMenu.style.top = `${posY}px`;
+    }
+
+    function openContextMenu(e, type, id) {
+      e.preventDefault();
+      e.stopPropagation();
+      selectSingleItem(type, id, false);
+
+      if (type === 'folder') {
+        ctxMenu.innerHTML = `
+          <div class="ctx-item" onclick="loadDrive(${id}); closeContextMenu();">${ICONS.open} Open Folder</div>
+          <div class="ctx-item" onclick="pinItemToDesktop('folder', ${id}); closeContextMenu();">${ICONS.desktop} Send to Desktop</div>
+          <div class="ctx-item" onclick="inspectItem('folder', ${id}); closeContextMenu();">${ICONS.eye} Details</div>
+          <div class="ctx-item" onclick="openRenameModal('folder', ${id}); closeContextMenu();">${ICONS.rename} Rename</div>
+          <div class="ctx-divider"></div>
+          <div class="ctx-item danger" onclick="moveSingleToTrash('folder', ${id}); closeContextMenu();">${ICONS.trash} Move to Trash</div>
+        `;
+      } else {
+        ctxMenu.innerHTML = `
+          <div class="ctx-item" onclick="inspectItem('file', ${id}); closeContextMenu();">${ICONS.eye} Preview in Rightbar</div>
+          <div class="ctx-item" onclick="openFullscreenPreview(${id}); closeContextMenu();">${ICONS.maximize} Full-Screen Preview</div>
+          <div class="ctx-item" onclick="pinItemToDesktop('file', ${id}); closeContextMenu();">${ICONS.desktop} Send to Desktop</div>
+          <div class="ctx-item" onclick="window.location='/api/download/${id}'; closeContextMenu();">${ICONS.download} Download</div>
+          <div class="ctx-item" onclick="openRenameModal('file', ${id}); closeContextMenu();">${ICONS.rename} Rename</div>
+          <div class="ctx-divider"></div>
+          <div class="ctx-item danger" onclick="moveSingleToTrash('file', ${id}); closeContextMenu();">${ICONS.trash} Move to Trash</div>
+        `;
+      }
+
+      showContextMenuAt(e.clientX, e.clientY);
+    }
+
+    function closeContextMenu() {
+      ctxMenu.style.display = 'none';
+    }
+
+    document.addEventListener('click', closeContextMenu);
+
+    // ADD FOLDER MODAL
+    document.querySelectorAll('#color-swatches .swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        document.querySelectorAll('#color-swatches .swatch').forEach(s => s.classList.remove('active'));
+        sw.classList.add('active');
+        selectedFolderColor = sw.dataset.color;
+      });
+    });
+
+    function openFolderModal(onDesktop = false) {
+      createFolderOnDesktop = onDesktop;
+      document.getElementById('folder-modal-title').innerText = onDesktop ? 'New Desktop Folder' : 'New Folder';
+      document.getElementById('new-folder-name').value = '';
+      document.getElementById('folder-modal').classList.add('open');
+      setTimeout(() => document.getElementById('new-folder-name').focus(), 50);
+    }
+
+    function closeFolderModal() {
+      document.getElementById('folder-modal').classList.remove('open');
+    }
+
+    async function submitNewFolder() {
+      const name = document.getElementById('new-folder-name').value.trim();
+      if (!name) return;
+      const res = await fetch('/api/folders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          color: selectedFolderColor,
+          parent_id: createFolderOnDesktop ? null : currentFolderId,
+          pin_desktop: createFolderOnDesktop
+        })
+      });
+      if (res.ok) {
+        closeFolderModal();
+        await Promise.all([loadDrive(), loadDesktopShortcuts()]);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.error || 'Could not create folder.');
+      }
+    }
+
+    // RENAME MODAL
+    function openRenameModal(type, id, presetName = null) {
+      renameTarget = { type, id };
+      let currentName = presetName;
+      if (!currentName) {
+        const item = type === 'folder'
+          ? driveFolders.find(f => f.id === id)
+          : driveFiles.find(f => f.id === id);
+        if (!item) return;
+        currentName = type === 'folder' ? item.name : item.filename;
+      }
+      document.getElementById('rename-input').value = currentName;
+      document.getElementById('rename-modal').classList.add('open');
+      setTimeout(() => document.getElementById('rename-input').focus(), 50);
+    }
+
+    function closeRenameModal() {
+      document.getElementById('rename-modal').classList.remove('open');
+      renameTarget = null;
+    }
+
+    async function submitRename() {
+      if (!renameTarget) return;
+      const val = document.getElementById('rename-input').value.trim();
+      if (!val) return;
+
+      if (renameTarget.type === 'folder') {
+        await fetch(`/api/folders/${renameTarget.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: val })
+        });
+      } else {
+        await fetch(`/api/files/${renameTarget.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: val })
+        });
+      }
+      closeRenameModal();
+      await Promise.all([loadDrive(), loadDesktopShortcuts()]);
+    }
+
+    // TRASH BIN OPERATIONS
+    async function moveSingleToTrash(type, id) {
+      await fetch('/api/trash/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items: [{ type, id }] })
+      });
+      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash()]);
+    }
+
+    async function moveSelectedDriveToTrash() {
+      const items = [...selectedKeys].map(k => {
+        const [type, id] = k.split(':');
+        return { type, id: Number(id) };
+      });
+      if (!items.length) return;
+      await fetch('/api/trash/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash()]);
+    }
+
+    async function loadTrash() {
+      const res = await fetch('/api/trash');
+      if (!res.ok) return;
+      const data = await res.json();
+      trashFolders = data.folders;
+      trashFiles = data.files;
+      selectedTrashKeys.clear();
+      const selAll = document.getElementById('trash-select-all');
+      if (selAll) selAll.checked = false;
+      updateTrashToolbar();
+      updateTrashBadges();
+      renderTrashTable();
+    }
+
+    function updateTrashBadges() {
+      const total = trashFolders.length + trashFiles.length;
+      const dockBadge = document.getElementById('dock-trash-badge');
+      const deskTitle = document.getElementById('desktop-trash-title');
+      if (dockBadge) {
+        dockBadge.style.display = total > 0 ? 'inline-block' : 'none';
+        dockBadge.innerText = total;
+      }
+      if (deskTitle) {
+        deskTitle.innerText = total > 0 ? `Trash Bin (${total})` : 'Trash Bin';
+      }
+    }
+
+    function updateTrashToolbar() {
+      const count = selectedTrashKeys.size;
+      const rBtn = document.getElementById('trash-restore-btn');
+      const dBtn = document.getElementById('trash-perm-delete-btn');
+      if (rBtn && dBtn) {
+        rBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+        dBtn.style.display = count > 0 ? 'inline-flex' : 'none';
+        document.getElementById('trash-restore-label').innerText = `Restore (${count})`;
+        document.getElementById('trash-perm-label').innerText = `Delete Forever (${count})`;
+      }
+    }
+
+    function toggleTrashCheck(type, id, checked) {
+      const key = `${type}:${id}`;
+      if (checked) selectedTrashKeys.add(key);
+      else selectedTrashKeys.delete(key);
+      updateTrashToolbar();
+      renderTrashTable();
+    }
+
+    function toggleTrashSelectAll(checked) {
+      selectedTrashKeys.clear();
+      if (checked) {
+        trashFolders.forEach(f => selectedTrashKeys.add(`folder:${f.id}`));
+        trashFiles.forEach(f => selectedTrashKeys.add(`file:${f.id}`));
+      }
+      updateTrashToolbar();
+      renderTrashTable();
+    }
+
+    function renderTrashTable() {
+      const tbody = document.getElementById('trash-table');
+      if (!tbody) return;
+      let rows = '';
+
+      trashFolders.forEach(folder => {
+        const key = `folder:${folder.id}`;
+        const isChecked = selectedTrashKeys.has(key);
+        rows += `
+          <tr class="${isChecked ? 'selected' : ''}" onclick="toggleTrashCheck('folder', ${folder.id}, ${!isChecked})">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" class="glass-check" ${isChecked ? 'checked' : ''} onchange="toggleTrashCheck('folder', ${folder.id}, this.checked)" />
+            </td>
+            <td><div class="file-cell">${folderSvg(folder.color, 19)} <strong>${escapeHtml(folder.name)}</strong></div></td>
+            <td><span class="pill Folder">Folder</span></td>
+            <td>${escapeHtml(folder.owner)}</td>
+            <td>—</td>
+            <td>${folder.trashed_at || '—'}</td>
+          </tr>
+        `;
+      });
+
+      trashFiles.forEach(f => {
+        const key = `file:${f.id}`;
+        const isChecked = selectedTrashKeys.has(key);
+        rows += `
+          <tr class="${isChecked ? 'selected' : ''}" onclick="toggleTrashCheck('file', ${f.id}, ${!isChecked})">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" class="glass-check" ${isChecked ? 'checked' : ''} onchange="toggleTrashCheck('file', ${f.id}, this.checked)" />
+            </td>
+            <td><div class="file-cell">${ICONS.file} <strong>${escapeHtml(f.filename)}</strong></div></td>
+            <td><span class="pill Skipped">File</span></td>
+            <td>${escapeHtml(f.owner)}</td>
+            <td>${(f.size_bytes / 1024).toFixed(1)} KB</td>
+            <td>${f.trashed_at || '—'}</td>
+          </tr>
+        `;
+      });
+
+      if (!rows) {
+        rows = `<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;">Trash Bin is empty.</td></tr>`;
+      }
+      tbody.innerHTML = rows;
+    }
+
+    async function restoreSelectedTrash() {
+      const items = [...selectedTrashKeys].map(k => {
+        const [type, id] = k.split(':');
+        return { type, id: Number(id) };
+      });
+      if (!items.length) return;
+      await fetch('/api/trash/restore', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+      await Promise.all([loadTrash(), loadDrive(), loadDesktopShortcuts()]);
+    }
+
+    async function deleteSelectedTrashPermanently() {
+      const items = [...selectedTrashKeys].map(k => {
+        const [type, id] = k.split(':');
+        return { type, id: Number(id) };
+      });
+      if (!items.length) return;
+      await fetch('/api/trash/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ items })
+      });
+      await Promise.all([loadTrash(), loadDesktopShortcuts()]);
+    }
+
+    async function emptyAllTrash() {
+      if (trashFolders.length + trashFiles.length === 0) return;
+      if (!confirm('Permanently delete everything in the Trash Bin? This cannot be undone.')) return;
+      await fetch('/api/trash/empty', { method: 'DELETE' });
+      await Promise.all([loadTrash(), loadDesktopShortcuts()]);
+    }
+
+    // NOTIFICATIONS
+    async function loadNotifications() {
+      const res = await fetch('/api/notifications');
+      const notes = await res.json();
+      const hasUnread = notes.some(n => n.is_read === 0);
+      document.getElementById('unread-dot').style.display = hasUnread ? 'inline-block' : 'none';
+
+      const list = document.getElementById('notif-list');
+      if (!notes.length) {
+        list.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px;font-size:0.84rem;">No notifications right now.</div>`;
+        return;
+      }
+
+      list.innerHTML = notes.map(n => `
+        <div class="notif-item ${n.level}">
+          <h4>${n.level === 'alert' ? ICONS.alertBell : ICONS.infoBell} ${escapeHtml(n.title)}</h4>
+          <div>${escapeHtml(n.message)}</div>
+          <time>${n.created_at}</time>
+        </div>
+      `).join('');
+    }
+
+    async function clearAllNotifications() {
+      await fetch('/api/notifications', { method: 'DELETE' });
+      document.getElementById('unread-dot').style.display = 'none';
+      loadNotifications();
+    }
+
+    async function toggleNotifCenter(forceClose = false, forceOpen = false) {
+      const drawer = document.getElementById('notif-drawer');
+      const willOpen = forceClose ? false : (forceOpen ? true : !drawer.classList.contains('open'));
+      drawer.classList.toggle('open', willOpen);
+
+      if (willOpen) {
+        await fetch('/api/notifications/read', { method: 'POST' });
+        document.getElementById('unread-dot').style.display = 'none';
+      }
+    }
+
+    function switchView(view) {
+      document.getElementById('view-desktop').style.display = view === 'desktop' ? 'flex' : 'none';
+      document.getElementById('view-drive').style.display = view === 'drive' ? 'flex' : 'none';
+      document.getElementById('view-terminal').style.display = view === 'terminal' ? 'flex' : 'none';
+      document.getElementById('view-trash').style.display = view === 'trash' ? 'flex' : 'none';
+      document.getElementById('view-security').style.display = view === 'security' ? 'flex' : 'none';
+
+      document.getElementById('dock-desktop').classList.toggle('active', view === 'desktop');
+      document.getElementById('dock-drive').classList.toggle('active', view === 'drive');
+      document.getElementById('dock-terminal').classList.toggle('active', view === 'terminal');
+      document.getElementById('dock-trash').classList.toggle('active', view === 'trash');
+      document.getElementById('dock-security').classList.toggle('active', view === 'security');
+
+      if (view === 'desktop') loadDesktopShortcuts();
+      if (view === 'trash') loadTrash();
+      if (view === 'terminal') setTimeout(() => document.getElementById('terminal-input').focus(), 40);
+    }
+
+    async function logout() {
+      await fetch('/api/logout', { method: 'POST' });
+      location.reload();
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.altKey && e.key.toLowerCase() === 'n') {
+        e.preventDefault();
+        toggleNotifCenter();
+      } else if (e.key === 'Escape') {
+        toggleNotifCenter(true);
+        closeContextMenu();
+        closeFolderModal();
+        closeRenameModal();
+        closeFullscreenPreview();
+      }
+    });
+
+    setInterval(() => {
+      document.getElementById('clock').innerText = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }, 1000);
+
+    initDesktop();
+  </script>
+</body>
+</html>
