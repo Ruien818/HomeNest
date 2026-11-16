@@ -163,6 +163,10 @@
       background: rgba(56, 189, 248, 0.18); border-color: rgba(56, 189, 248, 0.45); color: var(--accent);
     }
     .glass-btn.accent:hover { background: rgba(56, 189, 248, 0.28); }
+    .glass-btn.purple {
+      background: rgba(167, 139, 250, 0.2); border-color: rgba(167, 139, 250, 0.45); color: #ddd6fe;
+    }
+    .glass-btn.purple:hover { background: rgba(167, 139, 250, 0.3); }
     .glass-btn.danger {
       background: rgba(251, 113, 133, 0.15); border-color: rgba(251, 113, 133, 0.35); color: var(--danger);
     }
@@ -179,29 +183,31 @@
       padding: 16px; gap: 16px; position: relative; overflow: hidden;
     }
     .dock {
-      border-radius: 20px; padding: 14px 8px; display: flex;
-      flex-direction: column; gap: 10px; align-items: center; height: fit-content;
+      border-radius: 20px; padding: 12px 8px; display: flex;
+      flex-direction: column; gap: 8px; align-items: center; height: fit-content;
+      max-height: 100%; overflow-y: auto;
     }
     .app-icon {
-      width: 80px; text-align: center; cursor: pointer; padding: 9px 4px;
+      width: 80px; text-align: center; cursor: pointer; padding: 8px 4px;
       border-radius: 14px; border: 1px solid transparent; transition: all 0.2s;
       position: relative;
     }
     .app-icon:hover, .app-icon.active { background: rgba(255, 255, 255, 0.12); border-color: var(--glass-border); }
     .app-box {
-      width: 48px; height: 48px; margin: 0 auto 6px; border-radius: 14px;
+      width: 46px; height: 46px; margin: 0 auto 5px; border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
       border: 1px solid var(--glass-highlight); box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
     }
     .app-box.desktop-icon { background: linear-gradient(135deg, rgba(56, 189, 248, 0.45), rgba(99, 102, 241, 0.25)); color: var(--accent); }
     .app-box.drive-icon { background: linear-gradient(135deg, rgba(251, 191, 36, 0.45), rgba(245, 158, 11, 0.2)); color: var(--warm); }
-    .app-box.terminal-icon { background: linear-gradient(135deg, rgba(167, 139, 250, 0.42), rgba(15, 23, 42, 0.65)); color: #e9d5ff; }
+    .app-box.ai-icon { background: linear-gradient(135deg, rgba(167, 139, 250, 0.5), rgba(56, 189, 248, 0.3)); color: #f3e8ff; }
+    .app-box.terminal-icon { background: linear-gradient(135deg, rgba(148, 163, 184, 0.35), rgba(15, 23, 42, 0.65)); color: #e2e8f0; }
     .app-box.trash-icon { background: linear-gradient(135deg, rgba(251, 113, 133, 0.35), rgba(225, 29, 72, 0.18)); color: var(--danger); }
     .app-box.safety-icon { background: linear-gradient(135deg, rgba(52, 211, 153, 0.4), rgba(16, 185, 129, 0.18)); color: var(--emerald); }
-    .app-icon span { font-size: 0.75rem; font-weight: 600; color: var(--text); }
+    .app-icon span { font-size: 0.73rem; font-weight: 600; color: var(--text); }
     .dock-count-badge {
       position: absolute;
-      top: 6px;
+      top: 5px;
       right: 10px;
       background: var(--danger);
       color: #fff;
@@ -220,6 +226,209 @@
       display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
     }
     .window-title { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 0.95rem; }
+
+    /* PERSONAL AI ASSISTANT VIEW */
+    .ai-layout {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 290px;
+      overflow: hidden;
+    }
+    .ai-chat-column {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: rgba(6, 11, 23, 0.45);
+    }
+    .ai-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      user-select: text;
+    }
+    .ai-msg {
+      max-width: 84%;
+      padding: 13px 16px;
+      border-radius: 18px;
+      font-size: 0.88rem;
+      line-height: 1.55;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+    .ai-msg.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.26), rgba(99, 102, 241, 0.24));
+      border: 1px solid rgba(56, 189, 248, 0.42);
+      border-bottom-right-radius: 5px;
+    }
+    .ai-msg.assistant {
+      align-self: flex-start;
+      background: rgba(255, 255, 255, 0.07);
+      border: 1px solid var(--glass-border);
+      border-bottom-left-radius: 5px;
+    }
+    .ai-msg-meta {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+    }
+    .ai-action-cards {
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .ai-action-card {
+      padding: 9px 12px;
+      border-radius: 12px;
+      background: rgba(52, 211, 153, 0.12);
+      border: 1px solid rgba(52, 211, 153, 0.34);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.8rem;
+      color: #a7f3d0;
+    }
+    .ai-action-card.read {
+      background: rgba(56, 189, 248, 0.12);
+      border-color: rgba(56, 189, 248, 0.34);
+      color: #bae6fd;
+    }
+    .ai-action-card.error {
+      background: rgba(251, 113, 133, 0.14);
+      border-color: rgba(251, 113, 133, 0.35);
+      color: #fecdd3;
+    }
+    .ai-prompts-strip {
+      padding: 9px 18px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .ai-chip {
+      font-size: 0.75rem;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(167, 139, 250, 0.14);
+      border: 1px solid rgba(167, 139, 250, 0.32);
+      color: #e9d5ff;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ai-chip:hover {
+      background: rgba(167, 139, 250, 0.28);
+      border-color: var(--purple);
+    }
+    .ai-attached-bar {
+      padding: 6px 18px 0;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .ai-attached-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      background: rgba(251, 191, 36, 0.16);
+      border: 1px solid rgba(251, 191, 36, 0.4);
+      color: var(--warm);
+      font-size: 0.76rem;
+      font-weight: 600;
+    }
+    .ai-composer {
+      padding: 12px 18px 16px;
+      border-top: 1px solid var(--glass-border);
+      background: rgba(0, 0, 0, 0.25);
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+    #ai-input {
+      flex: 1;
+      resize: none;
+      min-height: 44px;
+      max-height: 130px;
+      padding: 11px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.07);
+      color: var(--text);
+      font-size: 0.88rem;
+      outline: none;
+      line-height: 1.4;
+    }
+    #ai-input:focus {
+      border-color: var(--purple);
+      background: rgba(255, 255, 255, 0.11);
+    }
+    .ai-context-sidebar {
+      border-left: 1px solid var(--glass-border);
+      background: rgba(0, 0, 0, 0.2);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    .ai-file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .ai-file-item {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.79rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ai-file-item:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--glass-highlight);
+    }
+    .lm-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--glass-border);
+    }
+    .lm-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warm);
+    }
+    .lm-dot.online {
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+    }
+    .lm-dot.offline {
+      background: var(--danger);
+    }
 
     /* DESKTOP CANVAS (FOLDERS, FILES & TRASH BIN) */
     .desktop-canvas {
@@ -846,6 +1055,12 @@
           </div>
           <span>NestDrive</span>
         </div>
+        <div class="app-icon" id="dock-ai" onclick="switchView('ai')">
+          <div class="app-box ai-icon">
+            <svg class="icon icon-lg" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/></svg>
+          </div>
+          <span>Personal AI</span>
+        </div>
         <div class="app-icon" id="dock-terminal" onclick="switchView('terminal')">
           <div class="app-box terminal-icon">
             <svg class="icon icon-lg" viewBox="0 0 24 24"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
@@ -995,7 +1210,69 @@
         </div>
       </div>
 
-      <!-- 3. WORKING TERMINAL WINDOW -->
+      <!-- 3. PERSONAL AI WINDOW (LM STUDIO FILE AGENT) -->
+      <div class="window glass-panel" id="view-ai" style="display: none;">
+        <div class="window-header">
+          <div class="window-title">
+            <svg class="icon" style="color: var(--purple);" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/></svg>
+            <span>Personal AI — NestDrive File Assistant (LM Studio)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span class="lm-status-pill" id="lm-status-pill" title="LM Studio local endpoint at localhost:1234">
+              <span class="lm-dot" id="lm-status-dot"></span>
+              <span id="lm-status-text">Checking LM Studio...</span>
+            </span>
+            <button class="glass-btn" onclick="refreshAiWorkspaceContext()">Sync Files</button>
+            <button class="glass-btn danger" onclick="clearAiChat()">New Chat</button>
+          </div>
+        </div>
+
+        <div class="ai-layout">
+          <div class="ai-chat-column">
+            <div class="ai-messages" id="ai-messages">
+              <div class="ai-msg assistant">
+                <div class="ai-msg-meta">
+                  <svg class="icon" style="width:14px;height:14px;color:var(--purple);" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/></svg>
+                  <span>HomeNest Personal AI · LM Studio</span>
+                </div>
+                <div>I can read your NestDrive files, summarize or edit documents, create new files and folders, organize files into folders, pin shortcuts to your Desktop, or move items to Trash. Ask me anything about your files!</div>
+              </div>
+            </div>
+
+            <div class="ai-prompts-strip">
+              <button class="ai-chip" onclick="sendAiPrompt('List all my folders and files and summarize how my NestDrive is organized.')">Summarize my Drive</button>
+              <button class="ai-chip" onclick="sendAiPrompt('Create a folder called Study_Notes and create a checklist.md file inside it.')">Create Study Folder &amp; File</button>
+              <button class="ai-chip" onclick="sendAiPrompt('Find any empty or untitled files in my Drive and tell me what they are.')">Find Empty Files</button>
+            </div>
+
+            <div class="ai-attached-bar" id="ai-attached-bar"></div>
+
+            <div class="ai-composer">
+              <textarea id="ai-input" rows="1"
+                        placeholder="Ask Personal AI to read, create, edit, organize, or clean up your files..."
+                        onkeydown="handleAiKeydown(event)"></textarea>
+              <button class="glass-btn purple" id="ai-send-btn" style="height: 44px; padding: 0 18px; font-weight: 700;" onclick="submitAiChat()">
+                <span>Send</span>
+              </button>
+            </div>
+          </div>
+
+          <aside class="ai-context-sidebar">
+            <div class="inspector-title">
+              <svg class="icon" style="width:15px;height:15px;color:var(--warm);" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+              <span>Live File Context</span>
+            </div>
+            <div style="font-size: 0.76rem; color: var(--muted); line-height: 1.4;">
+              Personal AI automatically sees your entire NestDrive tree. Click any file below to attach its full text directly to your next message:
+            </div>
+            <div class="ai-file-list" id="ai-file-list">
+              <div style="font-size:0.78rem;color:var(--muted);">Loading files...</div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- 4. WORKING TERMINAL WINDOW -->
       <div class="window glass-panel" id="view-terminal" style="display: none;">
         <div class="window-header">
           <div class="window-title">
@@ -1036,7 +1313,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         </div>
       </div>
 
-      <!-- 4. TRASH BIN WINDOW -->
+      <!-- 5. TRASH BIN WINDOW -->
       <div class="window glass-panel" id="view-trash" style="display: none;">
         <div class="window-header">
           <div class="window-title">
@@ -1077,7 +1354,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         </div>
       </div>
 
-      <!-- 5. SECURITY SETTINGS WINDOW -->
+      <!-- 6. SECURITY SETTINGS WINDOW -->
       <div class="window glass-panel" id="view-security" style="display: none;">
         <div class="window-header">
           <div class="window-title">
@@ -1250,6 +1527,16 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
     let termHistory = [];
     let termHistoryIdx = -1;
 
+    // PERSONAL AI STATE
+    const LM_STUDIO_DIRECT_URL = 'http://localhost:1234/v1/chat/completions';
+    const LM_STUDIO_MODELS_URL = 'http://localhost:1234/v1/models';
+    let aiChatHistory = [];
+    let aiAllFolders = [];
+    let aiAllFiles = [];
+    let aiAttachedFiles = [];
+    let aiActiveModel = 'local-model';
+    let aiBusy = false;
+
     const marqueeEl = document.getElementById('selection-marquee');
 
     const ICONS = {
@@ -1266,6 +1553,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
       rename: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>`,
       open: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>`,
       trash: `<svg class="icon" style="width:15px;height:15px;" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
+      sparkle: `<svg class="icon" style="width:14px;height:14px;color:var(--purple);" viewBox="0 0 24 24"><path d="M12 2l2.4 7.2L22 12l-7.6 2.8L12 22l-2.4-7.2L2 12l7.6-2.8z"/></svg>`,
       alertBell: `<svg class="icon" style="width:15px;height:15px;color:var(--danger);" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
       infoBell: `<svg class="icon" style="width:15px;height:15px;color:var(--warm);" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`
     };
@@ -1328,6 +1616,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
 
       updateScanIndicator();
       await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), loadNotifications()]);
+      refreshAiWorkspaceContext();
     }
 
     function updateScanIndicator() {
@@ -1349,6 +1638,609 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         currentUser.sensitive_scan = data.sensitive_scan;
         updateScanIndicator();
         loadNotifications();
+      }
+    }
+
+    // --- PERSONAL AI (LM STUDIO FILE AGENT) ---
+    async function checkLmStudioStatus() {
+      const dot = document.getElementById('lm-status-dot');
+      const text = document.getElementById('lm-status-text');
+      try {
+        let resp = await fetch('/api/ai/models');
+        if (resp.status === 404) {
+          resp = await fetch(LM_STUDIO_MODELS_URL);
+        }
+        if (resp.ok) {
+          const data = await resp.json();
+          const models = data.data || [];
+          if (models.length > 0 && models[0].id) {
+            aiActiveModel = models[0].id;
+          }
+          dot.className = 'lm-dot online';
+          text.innerText = `LM Studio: ${aiActiveModel}`;
+          return true;
+        }
+      } catch (_) {}
+      dot.className = 'lm-dot offline';
+      text.innerText = 'LM Studio Offline (port 1234)';
+      return false;
+    }
+
+    async function scanEntireDriveRecursive(folderId = null, pathPrefix = '/') {
+      const query = folderId !== null ? `?folder_id=${folderId}` : '';
+      const res = await fetch(`/api/drive${query}`);
+      if (!res.ok) return { folders: [], files: [] };
+      const data = await res.json();
+
+      let folders = data.folders.map(f => ({
+        ...f,
+        path: `${pathPrefix === '/' ? '' : pathPrefix}/${f.name}`
+      }));
+      let files = data.files.map(fi => ({
+        ...fi,
+        folder_path: pathPrefix,
+        full_path: `${pathPrefix === '/' ? '' : pathPrefix}/${fi.filename}`
+      }));
+
+      for (const fo of data.folders) {
+        const subPath = `${pathPrefix === '/' ? '' : pathPrefix}/${fo.name}`;
+        const sub = await scanEntireDriveRecursive(fo.id, subPath);
+        folders = folders.concat(sub.folders);
+        files = files.concat(sub.files);
+      }
+      return { folders, files };
+    }
+
+    async function refreshAiWorkspaceContext() {
+      checkLmStudioStatus();
+      const treeData = await scanEntireDriveRecursive(null, '/');
+      aiAllFolders = treeData.folders;
+      aiAllFiles = treeData.files;
+
+      const listEl = document.getElementById('ai-file-list');
+      if (!aiAllFiles.length) {
+        listEl.innerHTML = `<div style="font-size:0.78rem;color:var(--muted);">No files in NestDrive yet. Ask Personal AI to create one!</div>`;
+        return;
+      }
+
+      listEl.innerHTML = aiAllFiles.map(f => `
+        <div class="ai-file-item" onclick="attachFileToAiPrompt(${f.id})" title="Click to attach ${escapeHtml(f.full_path)} to chat">
+          <div style="display:flex;align-items:center;gap:7px;overflow:hidden;">
+            ${ICONS.file}
+            <div style="overflow:hidden;">
+              <div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(f.filename)}</div>
+              <div style="font-size:0.69rem;color:var(--muted);">${escapeHtml(f.folder_path)} · ${(f.size_bytes / 1024).toFixed(1)} KB</div>
+            </div>
+          </div>
+          <span style="color:var(--purple);font-weight:700;font-size:0.75rem;">+</span>
+        </div>
+      `).join('');
+    }
+
+    async function readDriveFileText(fileObj) {
+      if (!fileObj) return '(File not found)';
+      if (fileObj.filename.toLowerCase().endsWith('.docx')) {
+        const cleanPath = fileObj.full_path.startsWith('/') ? fileObj.full_path.slice(1) : fileObj.full_path;
+        const res = await fetch('/api/terminal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ command: `cat "${cleanPath}"`, cwd_id: null })
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.output || '(Empty document)';
+        }
+      }
+      const res = await fetch(`/api/preview/${fileObj.id}`);
+      if (!res.ok) return '(Unable to read file)';
+      const txt = await res.text();
+      return txt.slice(0, 12000) || '(Empty file)';
+    }
+
+    async function attachFileToAiPrompt(fileId) {
+      const fileObj = aiAllFiles.find(f => f.id === fileId);
+      if (!fileObj) return;
+      if (aiAttachedFiles.some(a => a.id === fileId)) return;
+
+      const content = await readDriveFileText(fileObj);
+      aiAttachedFiles.push({
+        id: fileObj.id,
+        filename: fileObj.filename,
+        full_path: fileObj.full_path,
+        content
+      });
+      renderAiAttachedBar();
+      document.getElementById('ai-input').focus();
+    }
+
+    function removeAiAttachment(fileId) {
+      aiAttachedFiles = aiAttachedFiles.filter(a => a.id !== fileId);
+      renderAiAttachedBar();
+    }
+
+    function renderAiAttachedBar() {
+      const bar = document.getElementById('ai-attached-bar');
+      if (!aiAttachedFiles.length) {
+        bar.style.display = 'none';
+        bar.innerHTML = '';
+        return;
+      }
+      bar.style.display = 'flex';
+      bar.innerHTML = aiAttachedFiles.map(a => `
+        <span class="ai-attached-pill">
+          <span>${escapeHtml(a.filename)}</span>
+          <span style="cursor:pointer;opacity:0.8;" onclick="removeAiAttachment(${a.id})">✕</span>
+        </span>
+      `).join('');
+    }
+
+    function buildAiSystemPrompt() {
+      const folderLines = aiAllFolders.length
+        ? aiAllFolders.map(f => `- Folder id=${f.id}: "${f.path}/" (color=${f.color})`).join('\n')
+        : '- (No folders yet)';
+
+      const fileLines = aiAllFiles.length
+        ? aiAllFiles.map(f => `- File id=${f.id}: "${f.full_path}" (${f.size_bytes} bytes, safety=${f.scan_status})`).join('\n')
+        : '- (No files yet)';
+
+      const trashLines = (trashFolders.length || trashFiles.length)
+        ? [
+            ...trashFolders.map(f => `- Trashed Folder id=${f.id}: "${f.name}"`),
+            ...trashFiles.map(f => `- Trashed File id=${f.id}: "${f.filename}"`)
+          ].join('\n')
+        : '- (Trash is empty)';
+
+      return `You are the HomeNest Personal AI for user "${currentUser ? currentUser.username : 'member'}" (role: ${currentUser ? currentUser.role : 'member'}).
+You have direct access to the user's NestDrive folders, files, Desktop shortcuts, and Trash Bin.
+
+CURRENT NESTDRIVE FOLDERS:
+${folderLines}
+
+CURRENT NESTDRIVE FILES:
+${fileLines}
+
+CURRENT TRASH BIN:
+${trashLines}
+
+HOW TO ACCESS OR MODIFY FILES:
+Whenever you need to inspect a file's contents or make changes to the user's files/folders, output one or more <homenest_action>{...}</homenest_action> blocks with valid single-line JSON inside. You can include multiple action blocks in order.
+
+Available actions:
+1. Read a file before answering or editing:
+   <homenest_action>{"action":"read_file","file_id":4}</homenest_action>
+2. Create a new file (creates folder automatically if folder_name is specified and doesn't exist):
+   <homenest_action>{"action":"create_file","filename":"notes.txt","folder_name":"School","content":"Line 1\\nLine 2","pin_desktop":false}</homenest_action>
+3. Edit, overwrite, or append to an existing file (use "\\n" for newlines inside JSON strings):
+   <homenest_action>{"action":"update_file","file_id":4,"mode":"replace","content":"Updated text here"}</homenest_action>
+   (mode can be "replace" or "append")
+4. Create a folder:
+   <homenest_action>{"action":"create_folder","name":"Projects","color":"#38bdf8","parent_folder":"","pin_desktop":false}</homenest_action>
+5. Rename a file or folder:
+   <homenest_action>{"action":"rename_item","type":"file","id":4,"new_name":"new_name.txt"}</homenest_action>
+6. Move a file into a folder (use target_folder: "" for root):
+   <homenest_action>{"action":"move_file","file_id":4,"target_folder":"Projects"}</homenest_action>
+7. Pin a file or folder to Desktop:
+   <homenest_action>{"action":"pin_desktop","type":"file","id":4}</homenest_action>
+8. Move a file or folder to Trash Bin:
+   <homenest_action>{"action":"trash_item","type":"file","id":4}</homenest_action>
+9. Restore a file or folder from Trash Bin:
+   <homenest_action>{"action":"restore_item","type":"file","id":4}</homenest_action>
+
+RULES:
+- Always match exact file_id / folder id from the inventory above when referencing existing items.
+- When the user asks to read, summarize, check, or edit an existing file whose content you haven't seen yet, emit a "read_file" action first.
+- Keep your explanation concise, clear, and helpful outside the <homenest_action> tags.`;
+    }
+
+    async function callLmStudio(messages) {
+      const payload = {
+        model: aiActiveModel,
+        messages,
+        temperature: 0.25,
+        max_tokens: 1400
+      };
+
+      // Try backend proxy first (if added to app.py), otherwise call LM Studio directly
+      try {
+        const proxyRes = await fetch('/api/ai/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (proxyRes.status !== 404) {
+          const data = await proxyRes.json();
+          if (!proxyRes.ok) throw new Error(data.error || 'LM Studio proxy error');
+          return data.choices[0].message.content;
+        }
+      } catch (err) {
+        if (!String(err.message).includes('404')) {
+          // Fall through to direct LM Studio call if network/404
+        }
+      }
+
+      const directRes = await fetch(LM_STUDIO_DIRECT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!directRes.ok) {
+        throw new Error(`LM Studio returned HTTP ${directRes.status}. Ensure the Local Server is running on port 1234 with CORS enabled.`);
+      }
+      const directData = await directRes.json();
+      return directData.choices[0].message.content;
+    }
+
+    function parseAiActions(rawReply) {
+      const actions = [];
+      const regex = /<homenest_action>([\s\S]*?)<\/homenest_action>/gi;
+      let match;
+      while ((match = regex.exec(rawReply)) !== null) {
+        const jsonStr = match[1].trim();
+        try {
+          actions.push(JSON.parse(jsonStr));
+        } catch (e) {
+          actions.push({ action: 'parse_error', raw: jsonStr, error: e.message });
+        }
+      }
+      const cleanText = rawReply.replace(regex, '').trim();
+      return { cleanText, actions };
+    }
+
+    function findFolderByNameOrId(nameOrId) {
+      if (nameOrId === null || nameOrId === undefined || nameOrId === '' || nameOrId === '/') return null;
+      if (typeof nameOrId === 'number' || /^\d+$/.test(String(nameOrId))) {
+        return aiAllFolders.find(f => f.id === Number(nameOrId)) || null;
+      }
+      const needle = String(nameOrId).replace(/^\/+|\/+$/g, '').toLowerCase();
+      return aiAllFolders.find(f => f.name.toLowerCase() === needle || f.path.toLowerCase() === '/' + needle) || null;
+    }
+
+    function findFileByNameOrId(nameOrId) {
+      if (nameOrId === null || nameOrId === undefined) return null;
+      if (typeof nameOrId === 'number' || /^\d+$/.test(String(nameOrId))) {
+        return aiAllFiles.find(f => f.id === Number(nameOrId)) || null;
+      }
+      const needle = String(nameOrId).replace(/^\/+/, '').toLowerCase();
+      return aiAllFiles.find(f => f.filename.toLowerCase() === needle || f.full_path.toLowerCase() === '/' + needle) || null;
+    }
+
+    async function executeSingleAiAction(act) {
+      if (act.action === 'parse_error') {
+        return { kind: 'error', label: `Invalid action JSON: ${act.error}` };
+      }
+
+      if (act.action === 'read_file') {
+        const fileObj = findFileByNameOrId(act.file_id ?? act.filename);
+        if (!fileObj) return { kind: 'error', label: `File not found: ${act.file_id ?? act.filename}` };
+        const text = await readDriveFileText(fileObj);
+        return {
+          kind: 'read',
+          label: `Read file: ${fileObj.full_path}`,
+          fileObj,
+          content: text
+        };
+      }
+
+      if (act.action === 'create_folder') {
+        const name = (act.name || '').trim();
+        if (!name) return { kind: 'error', label: 'Missing folder name' };
+        const parent = findFolderByNameOrId(act.parent_folder);
+        const res = await fetch('/api/folders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            color: act.color || '#fbbf24',
+            parent_id: parent ? parent.id : null,
+            pin_desktop: Boolean(act.pin_desktop)
+          })
+        });
+        if (!res.ok) return { kind: 'error', label: `Failed to create folder ${name}` };
+        const treeData = await scanEntireDriveRecursive(null, '/');
+        aiAllFolders = treeData.folders;
+        aiAllFiles = treeData.files;
+        return { kind: 'write', label: `Created folder: ${name}/` };
+      }
+
+      if (act.action === 'create_file') {
+        const filename = (act.filename || 'untitled.txt').trim();
+        const content = act.content ?? '';
+        let targetFolder = findFolderByNameOrId(act.folder_id ?? act.folder_name);
+
+        if (!targetFolder && act.folder_name) {
+          const cleanFolderName = String(act.folder_name).replace(/^\/+|\/+$/g, '');
+          if (cleanFolderName) {
+            await fetch('/api/folders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: cleanFolderName, color: '#38bdf8', parent_id: null })
+            });
+            const treeData = await scanEntireDriveRecursive(null, '/');
+            aiAllFolders = treeData.folders;
+            aiAllFiles = treeData.files;
+            targetFolder = findFolderByNameOrId(cleanFolderName);
+          }
+        }
+
+        const fd = new FormData();
+        fd.append('file', new Blob([content], { type: 'text/plain' }), filename);
+        if (targetFolder) fd.append('folder_id', targetFolder.id);
+        if (act.pin_desktop) fd.append('pin_desktop', '1');
+
+        const res = await fetch('/api/upload', { method: 'POST', body: fd });
+        if (!res.ok) return { kind: 'error', label: `Failed to create file ${filename}` };
+        const upData = await res.json();
+        const created = (upData.uploaded && upData.uploaded[0]) || {};
+        const treeData = await scanEntireDriveRecursive(null, '/');
+        aiAllFolders = treeData.folders;
+        aiAllFiles = treeData.files;
+        return {
+          kind: 'write',
+          label: `Created file: ${targetFolder ? targetFolder.path + '/' : '/'}${created.filename || filename} (${created.scan_status || 'Clean'})`,
+          fileId: created.id
+        };
+      }
+
+      if (act.action === 'update_file') {
+        const fileObj = findFileByNameOrId(act.file_id ?? act.filename);
+        if (!fileObj) return { kind: 'error', label: `File not found to update: ${act.file_id ?? act.filename}` };
+
+        let finalContent = act.content ?? '';
+        if (act.mode === 'append') {
+          const existing = await readDriveFileText(fileObj);
+          const sep = existing && !existing.endsWith('\n') ? '\n' : '';
+          finalContent = (existing === '(Empty file)' ? '' : existing + sep) + finalContent;
+        }
+
+        const wasPinned = desktopShortcuts.some(s => s.item_type === 'file' && s.item_id === fileObj.id);
+
+        const fd = new FormData();
+        fd.append('file', new Blob([finalContent], { type: 'text/plain' }), fileObj.filename);
+        if (fileObj.folder_id !== null && fileObj.folder_id !== undefined) {
+          fd.append('folder_id', fileObj.folder_id);
+        }
+        if (wasPinned) fd.append('pin_desktop', '1');
+
+        const upRes = await fetch('/api/upload', { method: 'POST', body: fd });
+        if (!upRes.ok) return { kind: 'error', label: `Failed to update ${fileObj.filename}` };
+        const upData = await upRes.json();
+        const newFile = (upData.uploaded && upData.uploaded[0]) || {};
+
+        // Remove superseded old version so no duplicate remains
+        await fetch('/api/trash/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: [{ type: 'file', id: fileObj.id }] })
+        });
+
+        const treeData = await scanEntireDriveRecursive(null, '/');
+        aiAllFolders = treeData.folders;
+        aiAllFiles = treeData.files;
+        return {
+          kind: 'write',
+          label: `Updated file: ${fileObj.full_path} (${newFile.scan_status || 'Clean'})`,
+          fileId: newFile.id
+        };
+      }
+
+      if (act.action === 'rename_item') {
+        const isFolder = act.type === 'folder';
+        const target = isFolder ? findFolderByNameOrId(act.id ?? act.name) : findFileByNameOrId(act.id ?? act.name);
+        if (!target) return { kind: 'error', label: `Item not found to rename` };
+        const newName = (act.new_name || '').trim();
+        if (!newName) return { kind: 'error', label: 'New name cannot be empty' };
+
+        if (isFolder) {
+          await fetch(`/api/folders/${target.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: newName })
+          });
+        } else {
+          await fetch(`/api/files/${target.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filename: newName })
+          });
+        }
+        return { kind: 'write', label: `Renamed to: ${newName}` };
+      }
+
+      if (act.action === 'move_file') {
+        const fileObj = findFileByNameOrId(act.file_id ?? act.filename);
+        if (!fileObj) return { kind: 'error', label: 'File not found to move' };
+        const destFolder = findFolderByNameOrId(act.target_folder);
+        await fetch(`/api/files/${fileObj.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ folder_id: destFolder ? destFolder.id : null })
+        });
+        return {
+          kind: 'write',
+          label: `Moved ${fileObj.filename} -> ${destFolder ? destFolder.path + '/' : '/'}`
+        };
+      }
+
+      if (act.action === 'pin_desktop') {
+        const isFolder = act.type === 'folder';
+        const target = isFolder ? findFolderByNameOrId(act.id ?? act.name) : findFileByNameOrId(act.id ?? act.name);
+        if (!target) return { kind: 'error', label: 'Item not found to pin' };
+        await fetch('/api/desktop', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ item_type: isFolder ? 'folder' : 'file', item_id: target.id })
+        });
+        return { kind: 'write', label: `Pinned to Desktop: ${isFolder ? target.name : target.filename}` };
+      }
+
+      if (act.action === 'trash_item') {
+        const isFolder = act.type === 'folder';
+        const target = isFolder ? findFolderByNameOrId(act.id ?? act.name) : findFileByNameOrId(act.id ?? act.name);
+        if (!target) return { kind: 'error', label: 'Item not found to trash' };
+        await fetch('/api/trash/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: [{ type: isFolder ? 'folder' : 'file', id: target.id }] })
+        });
+        return { kind: 'write', label: `Moved to Trash: ${isFolder ? target.name : target.filename}` };
+      }
+
+      if (act.action === 'restore_item') {
+        const isFolder = act.type === 'folder';
+        const id = Number(act.id);
+        await fetch('/api/trash/restore', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: [{ type: isFolder ? 'folder' : 'file', id }] })
+        });
+        return { kind: 'write', label: `Restored item #${id} from Trash` };
+      }
+
+      return { kind: 'error', label: `Unknown action: ${act.action}` };
+    }
+
+    function appendAiBubble(role, text, receipts = []) {
+      const container = document.getElementById('ai-messages');
+      const div = document.createElement('div');
+      div.className = `ai-msg ${role}`;
+
+      const senderLabel = role === 'user'
+        ? `${escapeHtml(currentUser ? currentUser.username : 'You')}`
+        : `${ICONS.sparkle} <span>HomeNest Personal AI</span>`;
+
+      let cardsHtml = '';
+      if (receipts.length) {
+        cardsHtml = `<div class="ai-action-cards">` + receipts.map(r => `
+          <div class="ai-action-card ${r.kind}">
+            <span>${escapeHtml(r.label)}</span>
+            ${r.fileId ? `<button class="glass-btn" style="padding:3px 9px;font-size:0.74rem;" onclick="openFullscreenPreview(${r.fileId})">Preview</button>` : ''}
+          </div>
+        `).join('') + `</div>`;
+      }
+
+      div.innerHTML = `
+        <div class="ai-msg-meta">${senderLabel}</div>
+        <div>${escapeHtml(text || (receipts.length ? 'Done!' : ''))}</div>
+        ${cardsHtml}
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      return div;
+    }
+
+    function clearAiChat() {
+      aiChatHistory = [];
+      aiAttachedFiles = [];
+      renderAiAttachedBar();
+      document.getElementById('ai-messages').innerHTML = `
+        <div class="ai-msg assistant">
+          <div class="ai-msg-meta">${ICONS.sparkle} <span>HomeNest Personal AI · LM Studio</span></div>
+          <div>Started a fresh conversation. Ask me to read, create, edit, or organize any of your NestDrive files.</div>
+        </div>
+      `;
+    }
+
+    function sendAiPrompt(presetText) {
+      document.getElementById('ai-input').value = presetText;
+      submitAiChat();
+    }
+
+    function handleAiKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitAiChat();
+      }
+    }
+
+    async function submitAiChat() {
+      if (aiBusy) return;
+      const inputEl = document.getElementById('ai-input');
+      const userPrompt = inputEl.value.trim();
+      if (!userPrompt && !aiAttachedFiles.length) return;
+
+      aiBusy = true;
+      document.getElementById('ai-send-btn').disabled = true;
+      inputEl.value = '';
+
+      await refreshAiWorkspaceContext();
+
+      let fullUserContent = userPrompt;
+      if (aiAttachedFiles.length) {
+        const attachedSection = aiAttachedFiles.map(a =>
+          `\n\n[ATTACHED FILE: ${a.full_path} (id=${a.id})]\n\`\`\`\n${a.content}\n\`\`\``
+        ).join('');
+        fullUserContent += attachedSection;
+      }
+
+      const displayPrompt = aiAttachedFiles.length
+        ? `${userPrompt}\n(Attached: ${aiAttachedFiles.map(a => a.filename).join(', ')})`
+        : userPrompt;
+
+      appendAiBubble('user', displayPrompt);
+      aiAttachedFiles = [];
+      renderAiAttachedBar();
+
+      aiChatHistory.push({ role: 'user', content: fullUserContent });
+
+      const thinkingBubble = appendAiBubble('assistant', 'Thinking & checking your NestDrive files...');
+
+      try {
+        let allReceipts = [];
+        let finalReplyText = '';
+
+        // Allow up to 2 agent steps (e.g., Step 1: read_file -> Step 2: summarize or update_file)
+        for (let step = 0; step < 2; step++) {
+          const messages = [
+            { role: 'system', content: buildAiSystemPrompt() },
+            ...aiChatHistory.slice(-12)
+          ];
+
+          const rawModelReply = await callLmStudio(messages);
+          aiChatHistory.push({ role: 'assistant', content: rawModelReply });
+
+          const { cleanText, actions } = parseAiActions(rawModelReply);
+          finalReplyText = cleanText;
+
+          if (!actions.length) break;
+
+          const readResults = [];
+          let mutatedDrive = false;
+
+          for (const act of actions) {
+            const receipt = await executeSingleAiAction(act);
+            allReceipts.push(receipt);
+            if (receipt.kind === 'read') {
+              readResults.push(`[CONTENT OF ${receipt.fileObj.full_path} (id=${receipt.fileObj.id})]:\n${receipt.content}`);
+            } else if (receipt.kind === 'write') {
+              mutatedDrive = true;
+            }
+          }
+
+          if (mutatedDrive) {
+            await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), loadNotifications(), refreshAiWorkspaceContext()]);
+          }
+
+          if (readResults.length > 0 && step === 0) {
+            aiChatHistory.push({
+              role: 'user',
+              content: `Here are the file contents you requested:\n\n${readResults.join('\n\n')}\n\nNow complete my request. If you need to save edits, emit an <homenest_action> block.`
+            });
+            continue;
+          }
+          break;
+        }
+
+        thinkingBubble.remove();
+        appendAiBubble('assistant', finalReplyText, allReceipts);
+      } catch (err) {
+        thinkingBubble.remove();
+        appendAiBubble('assistant', `Could not reach LM Studio: ${err.message}`, [
+          { kind: 'error', label: 'Tip: Start LM Studio Local Server on port 1234 (and enable CORS if running without /api/ai/chat).' }
+        ]);
+      } finally {
+        aiBusy = false;
+        document.getElementById('ai-send-btn').disabled = false;
+        inputEl.focus();
       }
     }
 
@@ -1411,7 +2303,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         updateTerminalPrompt();
 
         if (data.refresh) {
-          await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), loadNotifications()]);
+          await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), loadNotifications(), refreshAiWorkspaceContext()]);
         }
         if (data.open_file_id) {
           await openFullscreenPreview(data.open_file_id);
@@ -1547,7 +2439,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         }
 
         const data = await res.json();
-        await Promise.all([loadDrive(), loadDesktopShortcuts(), loadNotifications()]);
+        await Promise.all([loadDrive(), loadDesktopShortcuts(), loadNotifications(), refreshAiWorkspaceContext()]);
         if (data.uploaded && data.uploaded.some(u => u.scan_status === 'Flagged')) {
           toggleNotifCenter(false, true);
         }
@@ -1817,7 +2709,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
 
     // FULL-SCREEN PREVIEW OVERLAY
     async function openFullscreenPreview(fileId) {
-      let file = driveFiles.find(f => f.id === fileId);
+      let file = driveFiles.find(f => f.id === fileId) || aiAllFiles.find(f => f.id === fileId);
       if (!file) {
         const deskItem = desktopShortcuts.find(s => s.item_type === 'file' && s.item_id === fileId);
         if (deskItem) {
@@ -2293,7 +3185,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
       });
       if (res.ok) {
         closeFolderModal();
-        await Promise.all([loadDrive(), loadDesktopShortcuts()]);
+        await Promise.all([loadDrive(), loadDesktopShortcuts(), refreshAiWorkspaceContext()]);
       } else {
         const err = await res.json().catch(() => ({}));
         alert(err.error || 'Could not create folder.');
@@ -2340,7 +3232,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         });
       }
       closeRenameModal();
-      await Promise.all([loadDrive(), loadDesktopShortcuts()]);
+      await Promise.all([loadDrive(), loadDesktopShortcuts(), refreshAiWorkspaceContext()]);
     }
 
     // TRASH BIN OPERATIONS
@@ -2350,7 +3242,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: [{ type, id }] })
       });
-      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash()]);
+      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), refreshAiWorkspaceContext()]);
     }
 
     async function moveSelectedDriveToTrash() {
@@ -2364,7 +3256,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items })
       });
-      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash()]);
+      await Promise.all([loadDrive(), loadDesktopShortcuts(), loadTrash(), refreshAiWorkspaceContext()]);
     }
 
     async function loadTrash() {
@@ -2480,7 +3372,7 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items })
       });
-      await Promise.all([loadTrash(), loadDrive(), loadDesktopShortcuts()]);
+      await Promise.all([loadTrash(), loadDrive(), loadDesktopShortcuts(), refreshAiWorkspaceContext()]);
     }
 
     async function deleteSelectedTrashPermanently() {
@@ -2546,18 +3438,24 @@ Type <strong>help</strong> to see all file commands (ls, cd, mkdir, touch, cat, 
     function switchView(view) {
       document.getElementById('view-desktop').style.display = view === 'desktop' ? 'flex' : 'none';
       document.getElementById('view-drive').style.display = view === 'drive' ? 'flex' : 'none';
+      document.getElementById('view-ai').style.display = view === 'ai' ? 'flex' : 'none';
       document.getElementById('view-terminal').style.display = view === 'terminal' ? 'flex' : 'none';
       document.getElementById('view-trash').style.display = view === 'trash' ? 'flex' : 'none';
       document.getElementById('view-security').style.display = view === 'security' ? 'flex' : 'none';
 
       document.getElementById('dock-desktop').classList.toggle('active', view === 'desktop');
       document.getElementById('dock-drive').classList.toggle('active', view === 'drive');
+      document.getElementById('dock-ai').classList.toggle('active', view === 'ai');
       document.getElementById('dock-terminal').classList.toggle('active', view === 'terminal');
       document.getElementById('dock-trash').classList.toggle('active', view === 'trash');
       document.getElementById('dock-security').classList.toggle('active', view === 'security');
 
       if (view === 'desktop') loadDesktopShortcuts();
       if (view === 'trash') loadTrash();
+      if (view === 'ai') {
+        refreshAiWorkspaceContext();
+        setTimeout(() => document.getElementById('ai-input').focus(), 40);
+      }
       if (view === 'terminal') setTimeout(() => document.getElementById('terminal-input').focus(), 40);
     }
 

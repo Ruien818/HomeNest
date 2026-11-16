@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import shlex
 import shutil
 import sqlite3
@@ -15,13 +16,10 @@ from flask import Flask, request, jsonify, render_template, session, send_from_d
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-
 app = Flask(__name__)
 app.secret_key = "homenest-family-secret-key-change-me"
 
-
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-
 if os.path.basename(BASE_DIR).lower() == "homenest":
     HOMENEST_ROOT = BASE_DIR
 else:
@@ -29,8 +27,9 @@ else:
 
 STORAGE_DIR = os.path.join(HOMENEST_ROOT, "files")
 DB_PATH = os.path.join(BASE_DIR, "homenest.db")
-LM_STUDIO_URL = "http://localhost:1234/v1/chat/completions"
-
+LM_STUDIO_BASE = "http://localhost:1234"
+LM_STUDIO_URL = f"{LM_STUDIO_BASE}/v1/chat/completions"
+LM_STUDIO_MODELS_URL = f"{LM_STUDIO_BASE}/v1/models"
 
 os.makedirs(STORAGE_DIR, exist_ok=True)
 
@@ -146,7 +145,7 @@ init_db()
 
 
 # --- TEXT EXTRACTION HELPER ---
-def extract_readable_text(filepath, filename):
+def extract_readable_text(filepath, filename, limit=12000):
     lower = filename.lower()
     if lower.endswith(".docx"):
         try:
@@ -154,15 +153,14 @@ def extract_readable_text(filepath, filename):
                 xml_content = z.read("word/document.xml")
             tree = ET.fromstring(xml_content)
             paragraphs = [elem.text for elem in tree.iter() if elem.text]
-            return " ".join(paragraphs)[:5000]
+            return " ".join(paragraphs)[:limit]
         except Exception:
             return ""
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
-            return f.read(5000)
+            return f.read(limit)
     except Exception:
         return ""
-
 
 
 # --- MULTI-ENGINE CONTENT SCANNER ---
@@ -223,21 +221,12 @@ def run_sensitive_scan(filename, text_content):
     return reasons
 
 
-def save_and_register_file(conn, user, folder_id, raw_filename, content_bytes):
-    safe_name = secure_filename(raw_filename) or f"file_{datetime.datetime.now().strftime('%H%M%S')}.txt"
-    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
-    stored_name = f"{user['id']}_{timestamp}_{safe_name}"
-    save_path = os.path.join(STORAGE_DIR, stored_name)
-
-    with open(save_path, "wb") as f:
-        f.write(content_bytes)
-
-    size_bytes = os.path.getsize(save_path)
+def evaluate_file_safety(conn, user, save_path, safe_name):
     scan_status = "Skipped"
     scan_details = "Scanner disabled for this account."
 
     if user["role"] == "kid" or user["sensitive_scan"] == 1:
-        text_preview = extract_readable_text(save_path, safe_name)
+        text_preview = extract_readable_text(save_path, safe_name, limit=5000)
         flags = run_sensitive_scan(safe_name, text_preview)
         if flags:
             scan_status = "Flagged"
@@ -250,6 +239,21 @@ def save_and_register_file(conn, user, folder_id, raw_filename, content_bytes):
         else:
             scan_status = "Clean"
             scan_details = "Scanned by Python Engine & LM Studio — no threats found."
+
+    return scan_status, scan_details
+
+
+def save_and_register_file(conn, user, folder_id, raw_filename, content_bytes):
+    safe_name = secure_filename(raw_filename) or f"file_{datetime.datetime.now().strftime('%H%M%S')}.txt"
+    timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S%f")
+    stored_name = f"{user['id']}_{timestamp}_{safe_name}"
+    save_path = os.path.join(STORAGE_DIR, stored_name)
+
+    with open(save_path, "wb") as f:
+        f.write(content_bytes)
+
+    size_bytes = os.path.getsize(save_path)
+    scan_status, scan_details = evaluate_file_safety(conn, user, save_path, safe_name)
 
     cur = conn.execute(
         "INSERT INTO files (owner_id, folder_id, filename, stored_name, size_bytes, scan_status, scan_details, is_trashed, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?)",
@@ -272,7 +276,6 @@ def login_required(f):
 @app.route("/")
 def index():
     return render_template("index.html")
-
 
 
 @app.route("/api/signup", methods=["POST"])
@@ -808,7 +811,6 @@ def restore_from_trash():
     return jsonify({"status": "restored"})
 
 
-
 @app.route("/api/trash/delete", methods=["POST"])
 @login_required
 def delete_permanently():
@@ -867,7 +869,7 @@ def empty_trash():
     return jsonify({"status": "emptied"})
 
 
-# --- WORKING TERMINAL ENGINE (NESTDRIVE VFS + REAL INTERNET/SYSTEM SHELL) ---
+# --- SHARED NESTDRIVE VFS HELPERS (TERMINAL + PERSONAL AI) ---
 def get_visible_folders(conn, user, parent_id):
     if user["role"] == "parent":
         if parent_id is None:
@@ -960,6 +962,25 @@ def resolve_drive_target(conn, user, cwd_id, raw_path):
     return {"kind": "folder", "id": curr, "row": row}
 
 
+def ensure_folder_path(conn, user, raw_path, color="#fbbf24"):
+    cleaned = raw_path.strip().strip("/")
+    if not cleaned:
+        return None
+    curr = None
+    for seg in [s for s in cleaned.split("/") if s and s != "."]:
+        folders = get_visible_folders(conn, user, curr)
+        match = next((f for f in folders if f["name"].lower() == seg.lower()), None)
+        if match:
+            curr = match["id"]
+        else:
+            cur = conn.execute(
+                "INSERT INTO folders (owner_id, parent_id, name, color, is_trashed, created_at) VALUES (?, ?, ?, ?, 0, ?)",
+                (user["id"], curr, seg, color, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
+            )
+            curr = cur.lastrowid
+    return curr
+
+
 def build_tree_lines(conn, user, folder_id=None, prefix=""):
     lines = []
     folders = get_visible_folders(conn, user, folder_id)
@@ -979,6 +1000,392 @@ def build_tree_lines(conn, user, folder_id=None, prefix=""):
     return lines
 
 
+# --- PERSONAL AI (LM STUDIO AGENTIC FILE ASSISTANT) ---
+@app.route("/api/ai/status", methods=["GET"])
+@login_required
+def ai_status():
+    try:
+        resp = requests.get(LM_STUDIO_MODELS_URL, timeout=2.5)
+        if resp.status_code == 200:
+            models = resp.json().get("data", [])
+            model_id = models[0]["id"] if models else "Loaded Model"
+            return jsonify({"online": True, "model": model_id})
+    except Exception:
+        pass
+    return jsonify({"online": False, "model": None})
+
+
+def execute_ai_tool(conn, user, tool_name, args, allow_edits):
+    write_tools = {
+        "create_folder", "write_file", "append_file", "replace_in_file",
+        "rename_item", "move_item", "trash_item", "pin_desktop"
+    }
+    if tool_name in write_tools and not allow_edits:
+        return "Blocked: User has disabled 'Allow File Changes' mode.", None
+
+    if tool_name == "list_files":
+        path = (args.get("path") or "/").strip()
+        target = resolve_drive_target(conn, user, None, path)
+        if target["kind"] != "folder":
+            return f"Folder '{path}' not found.", None
+        folders = get_visible_folders(conn, user, target["id"])
+        files = get_visible_files(conn, user, target["id"])
+        items = [f"[DIR] {fo['name']}/" for fo in folders] + [
+            f"[FILE] {fi['filename']} ({fi['size_bytes']} bytes, {fi['scan_status']})" for fi in files
+        ]
+        summary = "\n".join(items) if items else "(empty folder)"
+        return summary, {"tool": "list_files", "label": f"Listed {path}", "mutated": False}
+
+    if tool_name == "read_file":
+        path = (args.get("path") or "").strip()
+        target = resolve_drive_target(conn, user, None, path)
+        if target["kind"] != "file":
+            # Fallback: search by filename anywhere in NestDrive
+            rows = conn.execute(
+                "SELECT * FROM files WHERE filename LIKE ? AND is_trashed = 0",
+                (f"%{os.path.basename(path)}%",)
+            ).fetchall()
+            visible = [r for r in rows if r["owner_id"] == user["id"] or user["role"] == "parent"]
+            if not visible:
+                return f"File '{path}' not found.", None
+            f_row = visible[0]
+        else:
+            f_row = target["row"]
+
+        disk_path = os.path.join(STORAGE_DIR, f_row["stored_name"])
+        content = extract_readable_text(disk_path, f_row["filename"], limit=10000)
+        return (
+            f"File: {f_row['filename']} ({f_row['size_bytes']} bytes)\nContent:\n{content or '(empty file)'}",
+            {"tool": "read_file", "label": f"Read {f_row['filename']}", "mutated": False}
+        )
+
+    if tool_name == "search_files":
+        query = (args.get("query") or "").strip().lower()
+        if user["role"] == "parent":
+            all_fo = conn.execute("SELECT * FROM folders WHERE is_trashed = 0").fetchall()
+            all_fi = conn.execute("SELECT * FROM files WHERE is_trashed = 0").fetchall()
+        else:
+            all_fo = conn.execute("SELECT * FROM folders WHERE owner_id = ? AND is_trashed = 0", (user["id"],)).fetchall()
+            all_fi = conn.execute("SELECT * FROM files WHERE owner_id = ? AND is_trashed = 0", (user["id"],)).fetchall()
+
+        hits = []
+        for fo in all_fo:
+            if query in fo["name"].lower():
+                hits.append(f"[DIR] {build_cwd_path(conn, fo['id'])}/")
+        for fi in all_fi:
+            parent_p = build_cwd_path(conn, fi["folder_id"])
+            full_p = f"{'' if parent_p == '/' else parent_p}/{fi['filename']}"
+            txt = extract_readable_text(os.path.join(STORAGE_DIR, fi["stored_name"]), fi["filename"], limit=4000)
+            if query in fi["filename"].lower() or query in txt.lower():
+                hits.append(f"[FILE] {full_p}")
+        return (
+            "\n".join(hits) if hits else f"No matches found for '{query}'.",
+            {"tool": "search_files", "label": f"Searched '{query}'", "mutated": False}
+        )
+
+    if tool_name == "create_folder":
+        path = (args.get("path") or args.get("name") or "").strip()
+        color = (args.get("color") or "#38bdf8").strip()
+        if not path:
+            return "Folder path is required.", None
+        fid = ensure_folder_path(conn, user, path, color=color)
+        conn.commit()
+        return (
+            f"Created folder '{path}' (id={fid}).",
+            {"tool": "create_folder", "label": f"Created folder {path}", "mutated": True}
+        )
+
+    if tool_name in ("write_file", "append_file"):
+        path = (args.get("path") or args.get("filename") or "").strip()
+        content = str(args.get("content") or "")
+        if not path:
+            return "File path is required.", None
+
+        target = resolve_drive_target(conn, user, None, path)
+        if target["kind"] == "file":
+            f_row = target["row"]
+            full_disk = os.path.join(STORAGE_DIR, f_row["stored_name"])
+            if tool_name == "append_file":
+                existing = extract_readable_text(full_disk, f_row["filename"], limit=50000)
+                sep = "\n" if existing and not existing.endswith("\n") else ""
+                final_text = existing + sep + content
+            else:
+                final_text = content
+
+            raw_bytes = final_text.encode("utf-8")
+            with open(full_disk, "wb") as wf:
+                wf.write(raw_bytes)
+            scan_status, scan_details = evaluate_file_safety(conn, user, full_disk, f_row["filename"])
+            conn.execute(
+                "UPDATE files SET size_bytes = ?, scan_status = ?, scan_details = ? WHERE id = ?",
+                (len(raw_bytes), scan_status, scan_details, f_row["id"])
+            )
+            conn.commit()
+            verb = "Appended to" if tool_name == "append_file" else "Updated"
+            return (
+                f"{verb} '{f_row['filename']}' ({len(raw_bytes)} bytes, Safety: {scan_status}).",
+                {"tool": tool_name, "label": f"{verb} {f_row['filename']}", "mutated": True}
+            )
+
+        # Create parent folders automatically if path contains subdirectories
+        clean_rel = path.lstrip("/")
+        dir_part = os.path.dirname(clean_rel)
+        file_part = os.path.basename(clean_rel)
+        parent_id = ensure_folder_path(conn, user, dir_part) if dir_part else None
+        _, saved_name, scan_status = save_and_register_file(conn, user, parent_id, file_part, content.encode("utf-8"))
+        conn.commit()
+        return (
+            f"Created '{saved_name}' in '{dir_part or '/'}' (Safety: {scan_status}).",
+            {"tool": tool_name, "label": f"Created {saved_name}", "mutated": True}
+        )
+
+    if tool_name == "replace_in_file":
+        path = (args.get("path") or "").strip()
+        old_text = str(args.get("old_text") or "")
+        new_text = str(args.get("new_text") or "")
+        target = resolve_drive_target(conn, user, None, path)
+        if target["kind"] != "file":
+            return f"File '{path}' not found.", None
+        f_row = target["row"]
+        full_disk = os.path.join(STORAGE_DIR, f_row["stored_name"])
+        current_text = extract_readable_text(full_disk, f_row["filename"], limit=50000)
+        if old_text not in current_text:
+            return f"Could not find target text inside '{f_row['filename']}'.", None
+        updated_text = current_text.replace(old_text, new_text, 1)
+        raw_bytes = updated_text.encode("utf-8")
+        with open(full_disk, "wb") as wf:
+            wf.write(raw_bytes)
+        scan_status, scan_details = evaluate_file_safety(conn, user, full_disk, f_row["filename"])
+        conn.execute(
+            "UPDATE files SET size_bytes = ?, scan_status = ?, scan_details = ? WHERE id = ?",
+            (len(raw_bytes), scan_status, scan_details, f_row["id"])
+        )
+        conn.commit()
+        return (
+            f"Edited '{f_row['filename']}' successfully.",
+            {"tool": "replace_in_file", "label": f"Edited {f_row['filename']}", "mutated": True}
+        )
+
+    if tool_name == "rename_item":
+        path = (args.get("path") or "").strip()
+        new_name = (args.get("new_name") or "").strip()
+        target = resolve_drive_target(conn, user, None, path)
+        if target["kind"] == "file" and new_name:
+            safe_new = secure_filename(new_name) or new_name
+            conn.execute("UPDATE files SET filename = ? WHERE id = ?", (safe_new, target["id"]))
+            conn.commit()
+            return (
+                f"Renamed file '{target['row']['filename']}' to '{safe_new}'.",
+                {"tool": "rename_item", "label": f"Renamed -> {safe_new}", "mutated": True}
+            )
+        if target["kind"] == "folder" and target["id"] is not None and new_name:
+            conn.execute("UPDATE folders SET name = ? WHERE id = ?", (new_name, target["id"]))
+            conn.commit()
+            return (
+                f"Renamed folder '{target['row']['name']}' to '{new_name}'.",
+                {"tool": "rename_item", "label": f"Renamed -> {new_name}/", "mutated": True}
+            )
+        return f"Could not rename '{path}'.", None
+
+    if tool_name == "move_item":
+        src_path = (args.get("source") or "").strip()
+        dst_folder_path = (args.get("destination_folder") or "/").strip()
+        src = resolve_drive_target(conn, user, None, src_path)
+        if src["kind"] not in ("file", "folder") or src["id"] is None:
+            return f"Source '{src_path}' not found.", None
+
+        if dst_folder_path in ("/", "~", ""):
+            dst_id = None
+        else:
+            dst = resolve_drive_target(conn, user, None, dst_folder_path)
+            dst_id = dst["id"] if dst["kind"] == "folder" else ensure_folder_path(conn, user, dst_folder_path)
+
+        if src["kind"] == "file":
+            conn.execute("UPDATE files SET folder_id = ? WHERE id = ?", (dst_id, src["id"]))
+            conn.commit()
+            return (
+                f"Moved '{src['row']['filename']}' to '{dst_folder_path or '/'}'.",
+                {"tool": "move_item", "label": f"Moved {src['row']['filename']}", "mutated": True}
+            )
+        if src["kind"] == "folder" and dst_id != src["id"]:
+            conn.execute("UPDATE folders SET parent_id = ? WHERE id = ?", (dst_id, src["id"]))
+            conn.commit()
+            return (
+                f"Moved folder '{src['row']['name']}' to '{dst_folder_path or '/'}'.",
+                {"tool": "move_item", "label": f"Moved {src['row']['name']}/", "mutated": True}
+            )
+        return "Invalid move target.", None
+
+    if tool_name == "trash_item":
+        path = (args.get("path") or "").strip()
+        target = resolve_drive_target(conn, user, None, path)
+        now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M")
+        if target["kind"] == "file":
+            conn.execute("UPDATE files SET is_trashed = 1, trashed_at = ? WHERE id = ?", (now, target["id"]))
+            conn.commit()
+            return (
+                f"Moved file '{target['row']['filename']}' to Trash Bin.",
+                {"tool": "trash_item", "label": f"Trashed {target['row']['filename']}", "mutated": True}
+            )
+        if target["kind"] == "folder" and target["id"] is not None:
+            trash_folder_recursive(conn, target["id"], now)
+            conn.commit()
+            return (
+                f"Moved folder '{target['row']['name']}' to Trash Bin.",
+                {"tool": "trash_item", "label": f"Trashed {target['row']['name']}/", "mutated": True}
+            )
+        return f"Item '{path}' not found.", None
+
+    if tool_name == "pin_desktop":
+        path = (args.get("path") or "").strip()
+        target = resolve_drive_target(conn, user, None, path)
+        if target["kind"] in ("file", "folder") and target["id"] is not None:
+            add_desktop_shortcut_internal(conn, user["id"], target["kind"], target["id"])
+            conn.commit()
+            return (
+                f"Pinned '{path}' to Desktop.",
+                {"tool": "pin_desktop", "label": f"Pinned {path} to Desktop", "mutated": True}
+            )
+        return f"Item '{path}' not found.", None
+
+    return f"Unknown tool '{tool_name}'.", None
+
+
+def extract_tool_call_from_text(text):
+    cleaned = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+    # Check fenced JSON blocks first
+    for match in re.finditer(r"```(?:json)?\s*(\{.*?\})\s*```", cleaned, flags=re.DOTALL):
+        try:
+            obj = json.loads(match.group(1))
+            if isinstance(obj, dict) and "tool" in obj:
+                return obj["tool"], obj.get("args", {})
+        except Exception:
+            pass
+
+    # Check raw inline JSON object containing "tool"
+    brace_start = cleaned.find("{")
+    brace_end = cleaned.rfind("}")
+    if brace_start != -1 and brace_end > brace_start:
+        candidate = cleaned[brace_start:brace_end + 1]
+        try:
+            obj = json.loads(candidate)
+            if isinstance(obj, dict) and "tool" in obj:
+                return obj["tool"], obj.get("args", {})
+        except Exception:
+            pass
+
+    return None, None
+
+
+@app.route("/api/ai/chat", methods=["POST"])
+@login_required
+def ai_chat():
+    data = request.get_json(silent=True) or {}
+    chat_history = data.get("messages", [])
+    allow_edits = bool(data.get("allow_edits", True))
+
+    conn = get_db()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+
+    tree_lines = build_tree_lines(conn, user, None)
+    tree_snapshot = "\n".join(tree_lines) if tree_lines else "(NestDrive is currently empty)"
+
+    tools_doc = (
+        "Available File Tools:\n"
+        '- {"tool": "list_files", "args": {"path": "/"}}\n'
+        '- {"tool": "read_file", "args": {"path": "notes.txt"}}\n'
+        '- {"tool": "search_files", "args": {"query": "keyword"}}\n'
+    )
+    if allow_edits:
+        tools_doc += (
+            '- {"tool": "create_folder", "args": {"path": "FolderName", "color": "#38bdf8"}}\n'
+            '- {"tool": "write_file", "args": {"path": "FolderName/file.txt", "content": "full text"}}\n'
+            '- {"tool": "append_file", "args": {"path": "file.txt", "content": "text to add"}}\n'
+            '- {"tool": "replace_in_file", "args": {"path": "file.txt", "old_text": "before", "new_text": "after"}}\n'
+            '- {"tool": "rename_item", "args": {"path": "old.txt", "new_name": "new.txt"}}\n'
+            '- {"tool": "move_item", "args": {"source": "file.txt", "destination_folder": "FolderName"}}\n'
+            '- {"tool": "trash_item", "args": {"path": "unwanted.txt"}}\n'
+            '- {"tool": "pin_desktop", "args": {"path": "FolderName"}}\n'
+        )
+    else:
+        tools_doc += "(Note: File editing is currently toggled OFF; only read/search tools are allowed.)\n"
+
+    system_prompt = (
+        f"You are HomeNest Personal AI, an intelligent local file assistant for {user['username']} ({user['role']}).\n"
+        "You have direct access to the user's NestDrive cloud filesystem.\n\n"
+        f"Current NestDrive Tree:\n{tree_snapshot}\n\n"
+        f"{tools_doc}\n"
+        "RULES:\n"
+        "1. When you need to read a file or make any change (create, edit, rename, move, trash, pin), reply ONLY with a single JSON object:\n"
+        '   {"tool": "<tool_name>", "args": {<arguments>}}\n'
+        "2. Do not wrap the JSON tool call in extra conversation; wait for the TOOL_RESULT message before answering the user.\n"
+        "3. Once all needed tool calls are finished, reply clearly and concisely to the user explaining what you found or changed."
+    )
+
+    llm_messages = [{"role": "system", "content": system_prompt}]
+    for msg in chat_history[-12:]:
+        role = msg.get("role")
+        content = str(msg.get("content", ""))
+        if role in ("user", "assistant") and content:
+            llm_messages.append({"role": role, "content": content})
+
+    executed_actions = []
+    any_mutated = False
+    final_reply = ""
+    active_model = None
+
+    for _step in range(6):
+        try:
+            resp = requests.post(
+                LM_STUDIO_URL,
+                json={"messages": llm_messages, "temperature": 0.2, "max_tokens": 900},
+                timeout=35
+            )
+            if resp.status_code != 200:
+                conn.close()
+                return jsonify({"error": f"LM Studio returned HTTP {resp.status_code}. Make sure a model is loaded."}), 502
+
+            payload = resp.json()
+            active_model = payload.get("model")
+            choice_msg = payload["choices"][0]["message"]
+            raw_content = choice_msg.get("content") or ""
+        except requests.exceptions.ConnectionError:
+            conn.close()
+            return jsonify({"error": "Cannot connect to LM Studio at http://localhost:1234. Start the Local Server in LM Studio first."}), 503
+        except Exception as exc:
+            conn.close()
+            return jsonify({"error": f"LM Studio error: {exc}"}), 500
+
+        tool_name, tool_args = extract_tool_call_from_text(raw_content)
+        if not tool_name:
+            final_reply = re.sub(r"<think>.*?</think>", "", raw_content, flags=re.DOTALL).strip()
+            break
+
+        observation, action_badge = execute_ai_tool(conn, user, tool_name, tool_args or {}, allow_edits)
+        if action_badge:
+            executed_actions.append(action_badge)
+            if action_badge.get("mutated"):
+                any_mutated = True
+
+        llm_messages.append({"role": "assistant", "content": raw_content})
+        llm_messages.append({
+            "role": "user",
+            "content": f"TOOL_RESULT ({tool_name}):\n{observation}\n\nNow either execute the next needed tool JSON or provide your final answer to the user."
+        })
+    else:
+        final_reply = "Completed the file operations listed above."
+
+    conn.close()
+    return jsonify({
+        "reply": final_reply or "Done.",
+        "actions": executed_actions,
+        "refresh": any_mutated,
+        "model": active_model
+    })
+
+
+# --- WORKING TERMINAL ENGINE (NESTDRIVE VFS + REAL INTERNET/SYSTEM SHELL) ---
 def run_host_command(raw_cmd):
     blocked_patterns = [
         r"\brm\s+-rf\s+/",
@@ -1007,14 +1414,12 @@ def run_host_command(raw_cmd):
 
     base = tokens[0].lower()
 
-    # Prevent ping from hanging indefinitely when no count flag is given
     if base == "ping":
         if is_windows and "-n" not in [t.lower() for t in tokens]:
             cmd_to_run = f"ping -n 4 {' '.join(tokens[1:])}"
         elif not is_windows and "-c" not in [t.lower() for t in tokens]:
             cmd_to_run = f"ping -c 4 {' '.join(tokens[1:])}"
 
-    # Map traceroute <-> tracert across macOS/Linux and Windows
     if base == "traceroute" and is_windows and not shutil.which("traceroute"):
         cmd_to_run = f"tracert {' '.join(tokens[1:])}"
     elif base == "tracert" and not is_windows and not shutil.which("tracert"):
@@ -1035,7 +1440,6 @@ def run_host_command(raw_cmd):
         return "Command timed out after 15 seconds."
     except Exception as exc:
         return f"Execution error: {exc}"
-
 
 
 @app.route("/api/terminal", methods=["POST"])
@@ -1061,7 +1465,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": "", "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # Handle echo redirection into NestDrive files: echo "hello" > file.txt or >> file.txt
     redir_match = re.match(r'^echo\s+(.*?)\s*(>>|>)\s*([^\s]+)$', raw_cmd)
     if redir_match:
         text_body = redir_match.group(1).strip().strip('"').strip("'")
@@ -1112,7 +1515,6 @@ def execute_terminal():
     cmd = tokens[0].lower()
     args = tokens[1:]
 
-    # 1. HELP
     if cmd == "help":
         help_text = (
             "HomeNest Terminal — NestDrive Files + Real Internet & System Shell\n"
@@ -1147,17 +1549,14 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": help_text, "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 2. CLEAR
     if cmd in ("clear", "cls"):
         conn.close()
         return jsonify({"output": "", "cwd_id": cwd_id, "cwd_path": cwd_path, "clear": True})
 
-    # 3. PWD
     if cmd == "pwd":
         conn.close()
         return jsonify({"output": f"/HomeNest/files{'' if cwd_path == '/' else cwd_path}", "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 4. CD
     if cmd == "cd":
         dest = args[0] if args else "/"
         target = resolve_drive_target(conn, user, cwd_id, dest)
@@ -1169,7 +1568,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": "", "cwd_id": new_cwd, "cwd_path": new_path})
 
-    # 5. LS / DIR
     if cmd in ("ls", "dir"):
         flags = [a for a in args if a.startswith("-")]
         paths = [a for a in args if not a.startswith("-")]
@@ -1210,14 +1608,12 @@ def execute_terminal():
             "cwd_path": cwd_path
         })
 
-    # 6. TREE
     if cmd == "tree":
         tree_lines = [f"/HomeNest/files{'' if cwd_path == '/' else cwd_path}"]
         tree_lines.extend(build_tree_lines(conn, user, cwd_id))
         conn.close()
         return jsonify({"output": "\n".join(tree_lines), "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 7. MKDIR
     if cmd == "mkdir":
         if not args:
             conn.close()
@@ -1242,7 +1638,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": "\n".join(created), "cwd_id": cwd_id, "cwd_path": cwd_path, "refresh": True})
 
-    # 8. TOUCH
     if cmd == "touch":
         if not args:
             conn.close()
@@ -1261,7 +1656,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": "\n".join(msgs), "cwd_id": cwd_id, "cwd_path": cwd_path, "refresh": True})
 
-    # 9. CAT / HEAD / TAIL
     if cmd in ("cat", "head", "tail"):
         if not args:
             conn.close()
@@ -1282,7 +1676,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": content or "(empty file)", "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 10. OPEN (OPENS IN FULLSCREEN PREVIEWER)
     if cmd == "open":
         if not args:
             conn.close()
@@ -1299,7 +1692,6 @@ def execute_terminal():
             "open_file_id": target["id"]
         })
 
-    # 11. DESKTOP (PIN SHORTCUT TO DESKTOP)
     if cmd == "desktop":
         if not args:
             conn.close()
@@ -1318,7 +1710,6 @@ def execute_terminal():
             "refresh": True
         })
 
-    # 12. RM (MOVE TO TRASH)
     if cmd == "rm":
         targets = [a for a in args if not a.startswith("-")]
         if not targets:
@@ -1340,7 +1731,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": "\n".join(msgs), "cwd_id": cwd_id, "cwd_path": cwd_path, "refresh": True})
 
-    # 13. MV (RENAME OR MOVE INTO FOLDER)
     if cmd == "mv":
         if len(args) < 2:
             conn.close()
@@ -1380,7 +1770,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": f"mv: cannot move '{args[0]}' to '{args[1]}'", "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 14. FIND & GREP
     if cmd == "find":
         query = args[0].lower() if args else ""
         if user["role"] == "parent":
@@ -1416,7 +1805,6 @@ def execute_terminal():
         conn.close()
         return jsonify({"output": "\n".join(hits) if hits else "No matching lines in current directory.", "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 15. WGET OR CURL -O / -o (DOWNLOAD DIRECTLY INTO NESTDRIVE)
     if cmd == "wget" or (cmd == "curl" and any(a in ("-o", "-O", "--output", "--remote-name") for a in args)):
         url = next((a for a in args if a.startswith("http://") or a.startswith("https://")), None)
         if not url:
@@ -1456,7 +1844,6 @@ def execute_terminal():
             conn.close()
             return jsonify({"output": f"Download failed: {exc}", "cwd_id": cwd_id, "cwd_path": cwd_path})
 
-    # 16. ALL OTHER REAL INTERNET & HOST COMMANDS (ping, curl, nslookup, dig, whois, traceroute, python, etc.)
     conn.close()
     host_output = run_host_command(raw_cmd)
     return jsonify({
