@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeNest — The Daily Ledger</title>
+
+    <!-- Apply saved / system theme before first paint -->
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Leaflet Map CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Times New Roman', Georgia, serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        input, textarea, select, button, [contenteditable="true"] {
+            user-select: text;
+            -webkit-user-select: text;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background: #f3efe7;
+            background-image: linear-gradient(rgba(0,0,0,0.02), rgba(0,0,0,0.02));
+            min-height: 100vh;
+            color: #111111;
+            line-height: 1.4;
+        }
+
+        .paper-shell {
+            background: #f8f5ee;
+            border: 1px solid #1f1f1f;
+            box-shadow: 0 18px 40px rgba(0,0,0,0.12);
+            position: relative;
+        }
+
+        .newspaper-header {
+            border-bottom: 3px solid #111111;
+            background: #f7f3eb;
+        }
+
+        .masthead {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 1rem;
+            border-bottom: 1px solid rgba(17, 17, 17, 0.6);
+            padding-bottom: 0.9rem;
+        }
+
+        .masthead-title {
+            font-size: clamp(2.4rem, 4vw, 5rem);
+            font-weight: 700;
+            letter-spacing: -0.08em;
+            line-height: 0.95;
+            text-transform: uppercase;
+        }
+
+        .edition-strip {
+            border-top: 1px solid rgba(17, 17, 17, 0.6);
+            border-bottom: 1px solid rgba(17, 17, 17, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            font-size: 10px;
+            font-weight: 700;
+            color: #3b3b3b;
+        }
+
+        .section-kicker {
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            font-size: 10px;
+            font-weight: 700;
+            color: #5a5a5a;
+            border-bottom: 1px solid rgba(17,17,17,0.4);
+            padding-bottom: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .lead-story {
+            border-right: 1px solid rgba(17,17,17,0.4);
+            padding-right: 1rem;
+        }
+
+        .lead-story h2 {
+            font-size: clamp(2rem, 3vw, 3.2rem);
+            line-height: 0.95;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+        }
+
+        .story-card {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(17,17,17,0.2);
+            transition: all 0.2s ease;
+        }
+
+        .story-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.08);
+        }
+
+        .story-card h3 {
+            font-size: clamp(1.2rem, 2vw, 1.8rem);
+            line-height: 1.05;
+            letter-spacing: -0.04em;
+            font-weight: 700;
+        }
+
+        .story-card p {
+            color: #333333;
+        }
+
+        .newspaper-sidebar {
+            border-left: 1px solid rgba(17,17,17,0.4);
+            padding-left: 1rem;
+        }
+
+        .paper-chip {
+            border: 1px solid rgba(17,17,17,0.4);
+            background: rgba(255,255,255,0.35);
+            color: #101010;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
+        }
+
+        .market-panel {
+            border: 1px solid rgba(17,17,17,0.4);
+            background: rgba(255,255,255,0.3);
+        }
+
+        .ticker-row {
+            border-top: 1px solid rgba(17,17,17,0.6);
+            border-bottom: 1px solid rgba(17,17,17,0.6);
+            background: #f0ebdf;
+            color: #111111;
+        }
+
+        .ticker-card {
+            border-right: 1px solid rgba(17,17,17,0.3);
+            white-space: nowrap;
+            padding-right: 0.9rem;
+        }
+
+        .ticker-card .symbol {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #4b4b4b;
+        }
+
+        .ticker-card .price {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .ticker-card .change {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 0.1rem 0.35rem;
+            border-radius: 999px;
+        }
+
+        .glass-panel,
+        .glass-card,
+        .glass-tab-active,
+        .glass-input {
+            border-radius: 0.9rem;
+        }
+
+        .glass-tab-active {
+            background: #111111;
+            color: #f9f6f1;
+            border: 1px solid rgba(17,17,17,0.8);
+        }
+
+        .glass-card {
+            background: rgba(255,255,255,0.25);
+            border: 1px solid rgba(17,17,17,0.2);
+        }
+
+        .glass-input {
+            background: rgba(255,255,255,0.45);
+            border: 1px solid rgba(17,17,17,0.35);
+            color: #111111;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(17,17,17,0.7);
+            box-shadow: none;
+        }
+
+        #map {
+            height: 360px;
+            width: 100%;
+            border-radius: 1rem;
+            border: 1px solid rgba(17,17,17,0.35);
+            overflow: hidden;
+        }
+
+        .leaflet-container {
+            background: #f0eadc !important;
+        }
+
+        .leaflet-popup-content-wrapper {
+            background: rgba(248, 245, 238, 0.98) !important;
+            border: 1px solid rgba(17,17,17,0.35);
+            color: #111111 !important;
+            border-radius: 0.8rem !important;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08) !important;
+        }
+
+        .leaflet-popup-tip {
+            background: rgba(248, 245, 238, 0.98) !important;
+        }
+
+        ::-webkit-scrollbar {
+            height: 6px;
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0,0,0,0.25);
+            border-radius: 10px;
+        }
+
+        .ticker-scroll::-webkit-scrollbar { display: none; }
+        .ticker-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* ==========================================
+           DARK MODE  (toggle in header, saved in localStorage)
+           ========================================== */
+        :root { --up: #15803d; --down: #dc2626; }
+
+        html.dark { color-scheme: dark; --up: #4ade80; --down: #f87171; }
+
+        html.dark body {
+            background: #0e0d0c;
+            background-image: linear-gradient(rgba(255,255,255,0.015), rgba(255,255,255,0.015));
+            color: #ece7dc;
+        }
+        html.dark .paper-shell { background: #1a1917; border-color: #3a3834; box-shadow: 0 18px 40px rgba(0,0,0,0.55); }
+        html.dark .newspaper-header { background: #1d1c19; border-bottom-color: #d9d3c5; }
+        html.dark .masthead { border-bottom-color: rgba(236,231,220,0.5); }
+        html.dark .edition-strip { border-top-color: rgba(236,231,220,0.5); border-bottom-color: rgba(236,231,220,0.5); color: #b5afa2; }
+        html.dark .section-kicker { color: #a8a295; border-bottom-color: rgba(236,231,220,0.35); }
+        html.dark .lead-story { border-right-color: rgba(236,231,220,0.3); }
+        html.dark .newspaper-sidebar { border-left-color: rgba(236,231,220,0.3); }
+        html.dark .story-card { background: rgba(255,255,255,0.04); border-color: rgba(236,231,220,0.15); }
+        html.dark .story-card:hover { box-shadow: 0 8px 22px rgba(0,0,0,0.45); }
+        html.dark .story-card p { color: #cfc9bb; }
+        html.dark .paper-chip { border-color: rgba(236,231,220,0.35); background: rgba(255,255,255,0.06); color: #ece7dc; }
+        html.dark .market-panel { border-color: rgba(236,231,220,0.3); background: rgba(255,255,255,0.04); }
+        html.dark .ticker-row { background: #151412; border-top-color: rgba(236,231,220,0.4); border-bottom-color: rgba(236,231,220,0.4); color: #ece7dc; }
+        html.dark .ticker-card { border-right-color: rgba(236,231,220,0.25); }
+        html.dark .ticker-card .symbol { color: #a8a295; }
+        html.dark .glass-tab-active { background: #ece7dc; color: #141311; border-color: #ece7dc; }
+        html.dark .glass-card { background: rgba(255,255,255,0.05); border-color: rgba(236,231,220,0.18); }
+        html.dark .glass-input { background: rgba(255,255,255,0.07); border-color: rgba(236,231,220,0.3); color: #ece7dc; }
+        html.dark .glass-input:focus { border-color: rgba(236,231,220,0.7); }
+        html.dark .glass-input::placeholder { color: #8c877b; }
+        html.dark .glass-input option { background: #1d1c19; color: #ece7dc; }
+        html.dark #map { border-color: rgba(236,231,220,0.3); }
+        html.dark .leaflet-container { background: #1a1917 !important; }
+        html.dark .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9); }
+        html.dark .leaflet-control-attribution { background: rgba(26,25,23,0.8) !important; color: #a8a295 !important; }
+        html.dark .leaflet-control-attribution a { color: #cfc9bb !important; }
+        html.dark .leaflet-popup-content-wrapper,
+        html.dark .leaflet-popup-tip { background: rgba(30,29,26,0.98) !important; color: #ece7dc !important; border-color: rgba(236,231,220,0.3); }
+        html.dark ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.25); }
+
+        html.dark .text-black { color: #ece7dc; }
+        html.dark .text-neutral-300 { color: #cfc9bb; }
+        html.dark .text-neutral-500 { color: #9a9488; }
+        html.dark .text-neutral-600 { color: #aaa496; }
+        html.dark .text-neutral-700 { color: #bdb7a9; }
+        html.dark .text-neutral-800 { color: #d3cdbf; }
+        html.dark .hover\:text-black:hover { color: #ffffff; }
+        html.dark .border-black\/10 { border-color: rgba(236,231,220,0.12); }
+        html.dark .border-black\/15 { border-color: rgba(236,231,220,0.15); }
+        html.dark .border-black\/20 { border-color: rgba(236,231,220,0.2); }
+        html.dark .border-black\/25 { border-color: rgba(236,231,220,0.25); }
+        html.dark .border-black\/40 { border-color: rgba(236,231,220,0.4); }
+        html.dark .bg-white { background-color: #262420; }
+        html.dark .bg-\[\#f4efe7\] { background-color: #1b1a17; }
+        html.dark .bg-\[\#f7f4ee\] { background-color: #1d1c19; }
+        html.dark .bg-black { background-color: #ece7dc; color: #141311; }
+        html.dark .hover\:bg-black:hover { background-color: #ece7dc; color: #141311; }
+        html.dark #user-chip { background-color: #2a2825; color: #ece7dc; border-color: rgba(236,231,220,0.2); }
+        html.dark .text-emerald-700 { color: var(--up); }
+        html.dark .text-rose-700 { color: var(--down); }
+        html.dark .text-amber-700 { color: #fbbf24; }
+
+        .theme-toggle {
+            width: 2rem; height: 2rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            border-radius: 999px;
+            border: 1px solid rgba(17,17,17,0.4);
+            background: rgba(255,255,255,0.45);
+            color: #111111;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .theme-toggle:hover { background: #111111; color: #f9f6f1; }
+        html.dark .theme-toggle { border-color: rgba(236,231,220,0.4); background: rgba(255,255,255,0.07); color: #ece7dc; }
+        html.dark .theme-toggle:hover { background: #ece7dc; color: #141311; }
+        .theme-toggle .icon-sun { display: none; }
+        html.dark .theme-toggle .icon-sun { display: inline; }
+        html.dark .theme-toggle .icon-moon { display: none; }
+
+        html:not(.dark) #city-chips-container .text-slate-300 { color: #444444; }
+        html:not(.dark) #city-chips-container .text-slate-400 { color: #666666; }
+        html:not(.dark) #city-chips-container .text-amber-300 { color: #92400e; }
+        html:not(.dark) .leaflet-popup-content .text-white { color: #111111; }
+        html:not(.dark) .leaflet-popup-content .text-amber-300,
+        html:not(.dark) .leaflet-popup-content .text-amber-200 { color: #92400e; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4 sm:p-8 min-h-screen">
+
+    <main class="paper-shell w-full max-w-6xl rounded-none md:rounded-2xl overflow-hidden">
+
+        <header class="newspaper-header p-4 sm:p-6">
+            <div class="masthead flex flex-col sm:flex-row sm:items-end">
+                <div>
+                    <div class="text-[10px] uppercase tracking-[0.32em] mb-2 text-neutral-500 font-bold">HomeNest Daily Edition</div>
+                    <h1 class="masthead-title">The Daily Ledger</h1>
+                </div>
+                <div class="sm:ml-auto text-left sm:text-right">
+                    <div class="text-[10px] uppercase tracking-[0.25em] text-neutral-500 font-bold">Candiac, Quebec</div>
+                    <div id="today-date" class="text-sm font-bold mt-1">Loading date...</div>
+                </div>
+            </div>
+
+            <div class="edition-strip flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 px-1">
+                <div class="flex items-center space-x-2 text-neutral-700">
+                    <span class="font-bold">Vol. 24</span>
+                    <span>•</span>
+                    <span>No. 112</span>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 sm:gap-4 text-[10px] uppercase tracking-[0.16em] text-neutral-600">
+                    <span>Tech News</span>
+                    <span>Stocks &amp; Charts</span>
+                    <span>Markets</span>
+                    <span>Best Things</span>
+                    <span>World</span>
+                    <span>Local</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 pt-4">
+                <div class="flex flex-wrap items-center gap-1.5 w-full lg:w-auto">
+                    <button id="tab-tech" data-category="tech" onclick="switchCategory('tech')" class="category-tab glass-tab-active px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-microchip"></i>
+                        <span>Tech News</span>
+                    </button>
+                    <button id="tab-stocks" data-category="stocks" onclick="switchCategory('stocks')" class="category-tab px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-neutral-700 hover:text-black transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Stocks</span>
+                    </button>
+                    <button id="tab-economy" data-category="economy" onclick="switchCategory('economy')" class="category-tab px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-neutral-700 hover:text-black transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-landmark"></i>
+                        <span>Markets</span>
+                    </button>
+                    <button id="tab-best" data-category="best" onclick="switchCategory('best')" class="category-tab px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-neutral-700 hover:text-black transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-award"></i>
+                        <span>Best Things</span>
+                    </button>
+                    <button id="tab-world" data-category="world" onclick="switchCategory('world')" class="category-tab px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-neutral-700 hover:text-black transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-globe"></i>
+                        <span>World</span>
+                    </button>
+                    <button id="tab-city" data-category="city" onclick="switchCategory('city')" class="category-tab px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-neutral-700 hover:text-black transition-all flex items-center space-x-1.5">
+                        <i class="fa-solid fa-earth-americas"></i>
+                        <span>Local Map</span>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-2 self-end lg:self-auto">
+                    <a href="/" class="px-3 py-1.5 rounded-full paper-chip hover:bg-black hover:text-white transition-all flex items-center gap-1.5" title="Return to HomeNest Hub">
+                        <i class="fa-solid fa-grip"></i>
+                        <span>Hub</span>
+                    </a>
+                    <button id="theme-toggle" onclick="toggleTheme()" class="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+                        <i class="fa-solid fa-moon icon-moon"></i>
+                        <i class="fa-solid fa-sun icon-sun"></i>
+                    </button>
+                    <div id="user-chip" class="flex items-center space-x-2 bg-black text-white px-3 py-1.5 rounded-full text-[11px] border border-black/10">
+                        <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-zinc-800 to-zinc-600 flex items-center justify-center text-[10px] font-bold text-white">
+                            <span id="user-initial">R</span>
+                        </div>
+                        <span id="user-display-name" class="hidden sm:inline">Ruien</span>
+                        <button onclick="signOut()" class="ml-1 text-neutral-300 hover:text-white transition-colors" title="Sign Out">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="ticker-row px-3 sm:px-5 py-2 overflow-x-auto ticker-scroll">
+            <div class="flex items-center gap-3 min-w-max">
+                <div class="px-2 py-1 paper-chip">Markets</div>
+                <div id="stocks-ticker-stream" class="flex items-center gap-4 text-[11px] text-neutral-800">
+                    <span>Loading market data...</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="city-selector-bar" class="hidden border-b border-black/25 p-4 sm:p-5 bg-[#f4efe7]">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center justify-between">
+                <div>
+                    <div class="text-[12px] uppercase tracking-[0.18em] text-neutral-600 font-bold">City Desk</div>
+                    <div class="text-sm mt-1 text-neutral-800">Current market focus: <span id="active-city-label" class="font-bold">Candiac, QC</span></div>
+                </div>
+                <form onsubmit="addCustomCity(event)" class="flex items-center gap-2">
+                    <input type="text" id="custom-city-input" placeholder="Search a city..." class="glass-input rounded-xl px-3 py-2 text-xs w-52 sm:w-64">
+                    <button type="submit" class="px-3 py-2 rounded-xl border border-black/40 bg-white text-[11px] uppercase tracking-[0.12em] font-bold text-black hover:bg-black hover:text-white transition-all">Search</button>
+                </form>
+            </div>
+            <div class="mt-4 glass-card p-2">
+                <div id="map"></div>
+            </div>
+            <div id="city-chips-container" class="mt-3 flex flex-wrap gap-2"></div>
+        </div>
+
+        <!-- UNIFIED STOCK CHART + SEARCH PANEL (APPEARS DIRECTLY ABOVE STOCKS NEWS) -->
+        <div id="stocks-panel" class="hidden border-b border-black/25 p-4 sm:p-5 bg-[#f7f4ee]">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+                <div class="flex-1">
+                    <div class="text-[12px] uppercase tracking-[0.18em] text-neutral-600 font-bold">Stock Chart &amp; News Lookup</div>
+                    <div class="mt-2 flex flex-col sm:flex-row gap-2">
+                        <input id="stock-search-input" type="text" value="AAPL" placeholder="Search ticker or company (e.g. AAPL, NVDA, SHOP.TO)..." class="glass-input rounded-xl px-3 py-2 text-xs w-full sm:w-80">
+                        <button onclick="searchStocks()" class="px-3 py-2 rounded-xl border border-black/40 bg-black text-[11px] uppercase tracking-[0.12em] font-bold text-white hover:opacity-90 transition-all">Search</button>
+                    </div>
+                    <div id="stock-suggestions" class="mt-3 flex flex-wrap gap-2">
+                        <button onclick="selectTickerQuick('AAPL')" class="px-2.5 py-1 rounded-full border border-black/20 bg-white text-[10px] uppercase tracking-[0.12em] font-bold text-neutral-700 hover:bg-black hover:text-white transition-all">AAPL</button>
+                        <button onclick="selectTickerQuick('NVDA')" class="px-2.5 py-1 rounded-full border border-black/20 bg-white text-[10px] uppercase tracking-[0.12em] font-bold text-neutral-700 hover:bg-black hover:text-white transition-all">NVDA</button>
+                        <button onclick="selectTickerQuick('MSFT')" class="px-2.5 py-1 rounded-full border border-black/20 bg-white text-[10px] uppercase tracking-[0.12em] font-bold text-neutral-700 hover:bg-black hover:text-white transition-all">MSFT</button>
+                        <button onclick="selectTickerQuick('TSLA')" class="px-2.5 py-1 rounded-full border border-black/20 bg-white text-[10px] uppercase tracking-[0.12em] font-bold text-neutral-700 hover:bg-black hover:text-white transition-all">TSLA</button>
+                        <button onclick="selectTickerQuick('SHOP.TO')" class="px-2.5 py-1 rounded-full border border-black/20 bg-white text-[10px] uppercase tracking-[0.12em] font-bold text-neutral-700 hover:bg-black hover:text-white transition-all">SHOP.TO</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <label class="text-[10px] uppercase tracking-[0.14em] text-neutral-600 font-bold">Period</label>
+                    <select id="stock-period" class="glass-input rounded-xl px-3 py-2 text-xs" onchange="loadSelectedStock()">
+                        <option value="1mo">1M</option>
+                        <option value="3mo">3M</option>
+                        <option value="6mo">6M</option>
+                        <option value="1y" selected>1Y</option>
+                        <option value="5y">5Y</option>
+                    </select>
+                    <label class="text-[10px] uppercase tracking-[0.14em] text-neutral-600 font-bold">Interval</label>
+                    <select id="stock-interval" class="glass-input rounded-xl px-3 py-2 text-xs" onchange="loadSelectedStock()">
+                        <option value="1d" selected>1D</option>
+                        <option value="1wk">1W</option>
+                        <option value="1mo">1M</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-5 grid gap-4 xl:grid-cols-[1.7fr_0.9fr]">
+                <div class="glass-card p-4">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div>
+                            <div id="stock-symbol" class="text-2xl font-bold tracking-tight">AAPL</div>
+                            <div id="stock-company" class="text-xs text-neutral-600">Apple Inc.</div>
+                        </div>
+                        <div class="text-right">
+                            <div id="stock-price" class="text-3xl font-bold tracking-tight">$0.00</div>
+                            <div id="stock-change" class="text-sm font-semibold">0.00%</div>
+                        </div>
+                    </div>
+                    <div class="mt-4 h-64 w-full">
+                        <canvas id="stock-chart" class="w-full h-full" style="cursor:crosshair"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card p-4">
+                    <div class="text-[12px] uppercase tracking-[0.18em] text-neutral-600 font-bold">Overview</div>
+                    <div id="stock-metrics" class="mt-4 space-y-3 text-sm text-neutral-800"></div>
+                </div>
+            </div>
+        </div>
+
+        <section class="p-4 sm:p-5 lg:p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center justify-between pb-4 border-b border-black/25">
+                <div class="section-kicker w-full lg:w-auto">AI Briefing</div>
+                <span id="ai-source-badge" class="paper-chip px-2 py-1">LM Studio</span>
+            </div>
+            <p id="ai-summary-text" class="mt-4 text-[15px] leading-relaxed text-neutral-800 italic">
+                Analyzing recent headlines...
+            </p>
+        </section>
+
+        <section id="articles-grid" class="p-4 sm:p-5 lg:p-6 pt-0">
+            <div class="text-center py-20 text-neutral-500 text-sm italic">Loading live news feed...</div>
+        </section>
+
+    </main>
+
+    <!-- FULL-SCREEN IN-APP GLASS STORY READER MODAL -->
+    <div id="modal-article-reader" class="fixed inset-0 z-[100] bg-black/90 backdrop-blur-2xl flex flex-col p-4 sm:p-8 hidden overflow-hidden">
+        <div class="w-full max-w-5xl mx-auto h-full flex flex-col space-y-4">
+            <div class="glass-panel rounded-2xl p-4 flex items-center justify-between gap-4 border border-white/20">
+                <div class="flex items-center space-x-3 overflow-hidden">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-300 flex-shrink-0">
+                        <i class="fa-solid fa-book-open"></i>
+                    </div>
+                    <div class="truncate">
+                        <div class="flex items-center space-x-2 text-[11px] font-semibold">
+                            <span id="reader-source" class="bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-md border border-purple-500/30 font-mono">Source</span>
+                            <span id="reader-date" class="text-slate-400 font-mono">Date</span>
+                        </div>
+                        <h2 id="reader-title" class="text-sm sm:text-base font-bold text-white truncate">Article Title</h2>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3 flex-shrink-0">
+                    <a id="reader-external-link" href="#" target="_blank" class="px-4 py-2 glass-card rounded-xl text-xs font-semibold text-amber-300 hover:text-white flex items-center space-x-1.5 transition-all">
+                        <span>Open Web Page</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                    </a>
+                    <button onclick="closeArticleReader()" class="w-9 h-9 rounded-xl glass-panel flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/20 transition-all" title="Close Story (Esc)">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="reader-body-container" class="flex-1 overflow-y-auto glass-panel rounded-3xl p-6 sm:p-10 border border-white/15 space-y-4">
+                <div id="reader-loading" class="text-center py-20 text-slate-400 italic space-y-3">
+                    <i class="fa-solid fa-spinner fa-spin text-3xl text-amber-400"></i>
+                    <div class="text-sm">Fetching original article story text...</div>
+                </div>
+                <div id="reader-text" class="hidden space-y-4 font-normal leading-relaxed text-slate-200 max-w-3xl mx-auto text-sm sm:text-base"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = "Guest";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const todayEl = document.getElementById('today-date');
+            if (todayEl) {
+                const options = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+                todayEl.innerText = new Date().toLocaleDateString('en-US', options);
+            }
+
+            fetch('/api/auth/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        currentUser = data.username;
+                        ['user-display-name', 'lb-user-name', 'player-name'].forEach(id => {
+                            let el = document.getElementById(id);
+                            if (el) el.innerText = currentUser;
+                        });
+                        ['user-initial', 'lb-user-initial', 'profile-modal-avatar'].forEach(id => {
+                            let el = document.getElementById(id);
+                            if (el) el.innerText = currentUser.charAt(0).toUpperCase();
+                        });
+                    } else {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(() => window.location.href = '/');
+        });
+
+        function signOut() {
+            fetch('/api/logout', { method: 'POST' })
+            .then(() => window.location.href = '/');
+        }
+
+        let currentCategory = 'tech';
+        let currentCity = 'Candiac, QC';
+        let currentStockSymbol = 'AAPL';
+        let activeStockNewsFilter = '';
+        let myCities = [
+            { name: 'Candiac, QC', lat: 45.38, lon: -73.51 },
+            { name: 'Montreal, QC', lat: 45.50, lon: -73.56 },
+            { name: 'Laval, QC', lat: 45.57, lon: -73.75 },
+            { name: 'Toronto, ON', lat: 43.65, lon: -79.38 },
+            { name: 'Washington DC', lat: 38.90, lon: -77.03 },
+            { name: 'Chicago, IL', lat: 41.87, lon: -87.62 },
+            { name: 'London, UK', lat: 51.50, lon: -0.12 },
+            { name: 'Tokyo, Japan', lat: 35.67, lon: 139.65 },
+            { name: 'Paris, France', lat: 48.85, lon: 2.35 }
+        ];
+        let currentArticles = [];
+        let map = null;
+        let storyMarkersLayer = null;
+        let liveMarketSnapshot = [];
+
+        function renderMarketMonitor() {
+            const el = document.getElementById('market-monitor-rows');
+            if (!el || !liveMarketSnapshot.length) return;
+            const targets = ['DOW', 'NASDAQ', 'S&P 500', 'TSX', 'GOLD', 'OIL'];
+            const rows = liveMarketSnapshot.filter(s => targets.includes(s.name));
+            el.innerHTML = rows.map((s, idx) => `
+                <div class="flex justify-between ${idx < rows.length - 1 ? 'border-b border-black/10 pb-2' : ''} text-sm">
+                    <span>${s.name}</span>
+                    <span class="font-bold ${s.is_positive ? 'text-emerald-700' : 'text-rose-700'}">
+                        ${s.is_positive ? '+' : '-'}${s.percent}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function loadStocksTicker() {
+            fetch('/api/stocks/ticker')
+            .then(r => r.json())
+            .then(data => {
+                if (data.success && data.stocks.length > 0) {
+                    liveMarketSnapshot = data.stocks;
+                    const stream = document.getElementById('stocks-ticker-stream');
+                    stream.innerHTML = data.stocks.map(s => `
+                        <div class="ticker-card flex items-center gap-2">
+                            <span class="symbol">${s.name}</span>
+                            <span class="price">$${s.price}</span>
+                            <span class="change ${s.is_positive ? 'bg-emerald-500/15 text-emerald-700' : 'bg-rose-500/10 text-rose-700'}">
+                                ${s.is_positive ? '▲' : '▼'} ${s.percent}
+                            </span>
+                        </div>
+                    `).join('');
+                    renderMarketMonitor();
+                }
+            })
+            .catch(err => console.error("Stocks ticker error:", err));
+        }
+
+        loadStocksTicker();
+        setInterval(loadStocksTicker, 30000);
+
+        function initWorldMap() {
+            if (map) return;
+
+            map = L.map('map', {
+                center: [30, -20],
+                zoom: 2,
+                zoomControl: true
+            });
+
+            L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            storyMarkersLayer = L.layerGroup().addTo(map);
+        }
+
+        function plotStoryMarkersOnMap() {
+            if (!map || !storyMarkersLayer) return;
+            storyMarkersLayer.clearLayers();
+
+            if (!currentArticles || currentArticles.length === 0) return;
+
+            const bounds = L.latLngBounds();
+
+            currentArticles.forEach((article, index) => {
+                if (article.lat && article.lon) {
+                    const marker = L.circleMarker([article.lat, article.lon], {
+                        radius: 9,
+                        fillColor: "#ef4444",
+                        color: "#ffffff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    });
+
+                    const popupHtml = `
+                        <div class="space-y-2 p-1 max-w-xs">
+                            <div class="flex items-center justify-between text-[10px] text-amber-300 font-semibold">
+                                <span>${article.source}</span>
+                                <span>${article.location_name || 'Story Location'}</span>
+                            </div>
+                            <div class="font-bold text-xs text-white leading-tight">${article.title}</div>
+                            <button onclick="openArticleReader(${index})" class="w-full mt-2 py-1.5 bg-amber-500/30 hover:bg-amber-500/50 border border-amber-500/50 rounded-lg text-amber-200 font-bold text-xs transition-all">
+                                Read Full Story In-App
+                            </button>
+                        </div>
+                    `;
+
+                    marker.bindPopup(popupHtml);
+                    storyMarkersLayer.addLayer(marker);
+                    bounds.extend([article.lat, article.lon]);
+                }
+            });
+
+            if (currentArticles.length > 0 && bounds.isValid()) {
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 6 });
+            }
+        }
+
+        function selectCity(cityName, lat, lon) {
+            currentCity = cityName;
+            document.getElementById('active-city-label').innerText = cityName;
+            if (map && lat && lon) {
+                map.flyTo([lat, lon], 5, { duration: 1.2 });
+            }
+            renderCityChips();
+            fetchNews();
+        }
+
+        function switchCategory(category) {
+            currentCategory = category;
+
+            document.querySelectorAll('.category-tab').forEach(btn => {
+                if (btn.dataset.category === category) {
+                    btn.className = 'category-tab glass-tab-active px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] transition-all flex items-center space-x-1.5';
+                } else {
+                    btn.className = 'category-tab px-3.5 py-2 text-[11px] uppercase tracking-[0.12em] text-neutral-700 hover:text-black transition-all flex items-center space-x-1.5';
+                }
+            });
+
+            const cityBar = document.getElementById('city-selector-bar');
+            if (category === 'city') {
+                cityBar.classList.remove('hidden');
+                initWorldMap();
+                setTimeout(() => {
+                    map.invalidateSize();
+                    plotStoryMarkersOnMap();
+                }, 200);
+                renderCityChips();
+            } else {
+                cityBar.classList.add('hidden');
+            }
+
+            const stocksPanel = document.getElementById('stocks-panel');
+            if (category === 'stocks') {
+                stocksPanel.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    sizeStockChart();
+                    loadSelectedStock();
+                });
+            } else {
+                stocksPanel.classList.add('hidden');
+            }
+
+            fetchNews();
+        }
+
+        function renderCityChips() {
+            const container = document.getElementById('city-chips-container');
+            container.innerHTML = '';
+
+            myCities.forEach(city => {
+                const chip = document.createElement('button');
+                const isActive = city.name === currentCity;
+                chip.className = `px-3 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center space-x-1.5 ${
+                    isActive ? 'bg-amber-500/30 text-amber-300 border border-amber-500/50 shadow-md' : 'glass-card text-slate-300 hover:text-white'
+                }`;
+                chip.innerHTML = `
+                    <i class="fa-solid fa-location-dot text-[10px] ${isActive ? 'text-amber-300' : 'text-slate-400'}"></i>
+                    <span>${city.name}</span>
+                `;
+                chip.onclick = () => selectCity(city.name, city.lat, city.lon);
+                container.appendChild(chip);
+            });
+        }
+
+        async function addCustomCity(e) {
+            e.preventDefault();
+            const input = document.getElementById('custom-city-input');
+            const query = input.value.trim();
+            if (!query) return;
+
+            try {
+                const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=en&format=json`);
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    const target = data.results[0];
+                    const cityName = `${target.name}, ${target.admin1 || target.country || ''}`;
+                    if (!myCities.some(c => c.name === cityName)) {
+                        myCities.push({ name: cityName, lat: target.latitude, lon: target.longitude });
+                    }
+                    input.value = '';
+                    selectCity(cityName, target.latitude, target.longitude);
+                } else {
+                    selectCity(query);
+                }
+            } catch (err) {
+                selectCity(query);
+            }
+        }
+
+        function isDarkMode() {
+            return document.documentElement.classList.contains('dark');
+        }
+
+        function toggleTheme() {
+            const dark = !isDarkMode();
+            document.documentElement.classList.toggle('dark', dark);
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+            drawStockChart();
+        }
+
+        if (window.matchMedia) {
+            matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+                let saved = null;
+                try { saved = localStorage.getItem('theme'); } catch (err) {}
+                if (!saved) {
+                    document.documentElement.classList.toggle('dark', e.matches);
+                    drawStockChart();
+                }
+            });
+        }
+
+        const stockChart = { points: [], values: [], width: 800, height: 250, pad: 20, hover: null, bound: false };
+
+        function stockPointDate(p) {
+            const raw = p.date ?? p.Date ?? p.datetime ?? p.time ?? p.timestamp ?? p.t;
+            if (raw === undefined || raw === null || raw === '') return '';
+            let d;
+            if (typeof raw === 'number') {
+                d = new Date(raw < 1e12 ? raw * 1000 : raw);
+            } else if (/^\d{4}-\d{2}-\d{2}$/.test(String(raw))) {
+                d = new Date(String(raw) + 'T12:00:00');
+            } else {
+                d = new Date(raw);
+            }
+            if (isNaN(d)) return String(raw);
+            return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        function updateStockChart(points) {
+            const canvas = document.getElementById('stock-chart');
+            if (!canvas) return;
+            const values = points.map(p => Number(p.close || 0));
+            if (!values.length) return;
+
+            stockChart.points = points;
+            stockChart.values = values;
+            stockChart.hover = null;
+            sizeStockChart();
+            drawStockChart();
+
+            if (!stockChart.bound) {
+                stockChart.bound = true;
+                canvas.addEventListener('mousemove', onStockChartMove);
+                canvas.addEventListener('mouseleave', () => { stockChart.hover = null; drawStockChart(); });
+                canvas.addEventListener('touchmove', (e) => { if (e.touches[0]) onStockChartMove(e.touches[0]); }, { passive: true });
+                canvas.addEventListener('touchend', () => { stockChart.hover = null; drawStockChart(); });
+                window.addEventListener('resize', () => { sizeStockChart(); drawStockChart(); });
+            }
+        }
+
+        function sizeStockChart() {
+            const canvas = document.getElementById('stock-chart');
+            if (!canvas) return;
+            const ratio = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            stockChart.width = rect.width || canvas.clientWidth || 800;
+            stockChart.height = rect.height || canvas.clientHeight || 250;
+            canvas.width = stockChart.width * ratio;
+            canvas.height = stockChart.height * ratio;
+            canvas.getContext('2d').setTransform(ratio, 0, 0, ratio, 0, 0);
+        }
+
+        function onStockChartMove(e) {
+            const canvas = document.getElementById('stock-chart');
+            const { values, width, pad } = stockChart;
+            if (!values.length) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX - rect.left) * (width / rect.width);
+            const step = (width - pad * 2) / Math.max(values.length - 1, 1);
+            const idx = Math.max(0, Math.min(values.length - 1, Math.round((x - pad) / step)));
+            if (idx !== stockChart.hover) {
+                stockChart.hover = idx;
+                drawStockChart();
+            }
+        }
+
+        function drawStockChart() {
+            const canvas = document.getElementById('stock-chart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const { values, points, width, height, pad } = stockChart;
+            if (!values.length) return;
+
+            const min = Math.min(...values);
+            const max = Math.max(...values);
+            const chartHeight = height - pad * 2;
+            const chartWidth = width - pad * 2;
+            const range = max - min || 1;
+            const px = i => values.length === 1 ? width / 2 : pad + (chartWidth / Math.max(values.length - 1, 1)) * i;
+            const py = v => values.length === 1 ? height / 2 : height - pad - ((v - min) / range) * chartHeight;
+
+            const dark = isDarkMode();
+            const INK = dark ? '#ece7dc' : '#111111';
+            const PAPER = dark ? 'rgba(30,29,26,0.97)' : 'rgba(255,255,255,0.97)';
+            ctx.clearRect(0, 0, width, height);
+            ctx.strokeStyle = dark ? 'rgba(236,231,220,0.12)' : 'rgba(17, 17, 17, 0.12)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = pad + (chartHeight / 4) * i;
+                ctx.beginPath();
+                ctx.moveTo(pad, y);
+                ctx.lineTo(width - pad, y);
+                ctx.stroke();
+            }
+
+            const UP = dark ? '#22c55e' : '#16a34a', DOWN = dark ? '#f87171' : '#dc2626';
+            const lineColor = values[values.length - 1] >= values[0] ? UP : DOWN;
+
+            if (values.length > 1) {
+                const fillGradient = ctx.createLinearGradient(0, 0, 0, height);
+                fillGradient.addColorStop(0, lineColor + '66');
+                fillGradient.addColorStop(1, lineColor + '00');
+                ctx.beginPath();
+                values.forEach((v, i) => (i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v))));
+                ctx.lineTo(px(values.length - 1), height - pad);
+                ctx.lineTo(px(0), height - pad);
+                ctx.closePath();
+                ctx.fillStyle = fillGradient;
+                ctx.fill();
+
+                ctx.lineWidth = 2.5;
+                ctx.lineJoin = 'round';
+                ctx.lineCap = 'round';
+                for (let i = 1; i < values.length; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(px(i - 1), py(values[i - 1]));
+                    ctx.lineTo(px(i), py(values[i]));
+                    ctx.strokeStyle = values[i] >= values[i - 1] ? UP : DOWN;
+                    ctx.stroke();
+                }
+            }
+
+            ctx.beginPath();
+            ctx.arc(px(values.length - 1), py(values[values.length - 1]), 5, 0, 2 * Math.PI);
+            ctx.fillStyle = lineColor;
+            ctx.fill();
+
+            const h = stockChart.hover;
+            if (h === null || h === undefined || !points[h]) return;
+            const p = points[h];
+            const x = px(h), y = py(values[h]);
+
+            ctx.save();
+            ctx.setLineDash([4, 4]);
+            ctx.strokeStyle = dark ? 'rgba(236,231,220,0.5)' : 'rgba(17,17,17,0.45)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x, pad);
+            ctx.lineTo(x, height - pad);
+            ctx.stroke();
+            ctx.restore();
+
+            const prev = h > 0 ? values[h - 1] : null;
+            const chg = prev !== null && prev !== 0 ? ((values[h] - prev) / prev) * 100 : null;
+            const dotColor = prev === null || values[h] >= prev ? UP : DOWN;
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+            ctx.fillStyle = dark ? '#1a1917' : '#fff';
+            ctx.fill();
+            ctx.lineWidth = 2.5;
+            ctx.strokeStyle = dotColor;
+            ctx.stroke();
+
+            const fmt = n => Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            const lines = [{ text: stockPointDate(p) || `Point ${h + 1}`, bold: true }];
+            lines.push({ text: `Close  $${fmt(values[h])}`, bold: true });
+            if (p.open != null) lines.push({ text: `Open   $${fmt(p.open)}` });
+            if (p.high != null) lines.push({ text: `High   $${fmt(p.high)}` });
+            if (p.low != null) lines.push({ text: `Low    $${fmt(p.low)}` });
+            if (p.volume != null) lines.push({ text: `Volume ${Number(p.volume).toLocaleString('en-US')}` });
+            if (chg !== null) lines.push({ text: `vs prev  ${chg >= 0 ? '+' : ''}${chg.toFixed(2)}%`, color: chg >= 0 ? UP : DOWN, bold: true });
+
+            const lineH = 16, padX = 10, padY = 8;
+            ctx.font = '12px ui-monospace, SFMono-Regular, Menlo, monospace';
+            const boxW = Math.max(...lines.map(l => ctx.measureText(l.text).width)) + padX * 2;
+            const boxH = lines.length * lineH + padY * 2 - 4;
+            let bx = x + 14;
+            if (bx + boxW > width - 4) bx = x - 14 - boxW;
+            bx = Math.max(4, bx);
+            let by = Math.min(Math.max(4, y - boxH / 2), height - boxH - 4);
+
+            ctx.fillStyle = PAPER;
+            ctx.strokeStyle = dark ? 'rgba(236,231,220,0.6)' : 'rgba(17,17,17,0.7)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.rect(bx, by, boxW, boxH);
+            ctx.fill();
+            ctx.stroke();
+            lines.forEach((l, i) => {
+                ctx.font = `${l.bold ? 'bold ' : ''}12px ui-monospace, SFMono-Regular, Menlo, monospace`;
+                ctx.fillStyle = l.color || INK;
+                ctx.textBaseline = 'top';
+                ctx.fillText(l.text, bx + padX, by + padY + i * lineH - 2);
+            });
+        }
+
+        function renderStockMetrics(data) {
+            const metrics = document.getElementById('stock-metrics');
+            if (!metrics) return;
+            const marketCap = data.market_cap ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 2 }).format(data.market_cap) : 'N/A';
+            const change = Number(data.change_percent || 0);
+            const isPositive = change >= 0;
+            metrics.innerHTML = `
+                <div class="flex items-center justify-between border-b border-black/10 pb-2">
+                    <span class="text-neutral-600">Current</span>
+                    <span class="font-bold">$${Number(data.current_price || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                </div>
+                <div class="flex items-center justify-between border-b border-black/10 pb-2">
+                    <span class="text-neutral-600">Change</span>
+                    <span class="font-bold ${isPositive ? 'text-emerald-700' : 'text-rose-700'}">${isPositive ? '+' : ''}${Number(data.change || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                </div>
+                <div class="flex items-center justify-between border-b border-black/10 pb-2">
+                    <span class="text-neutral-600">Percent</span>
+                    <span class="font-bold ${isPositive ? 'text-emerald-700' : 'text-rose-700'}">${isPositive ? '+' : ''}${Number(data.change_percent || 0).toFixed(2)}%</span>
+                </div>
+                <div class="flex items-center justify-between border-b border-black/10 pb-2">
+                    <span class="text-neutral-600">Market cap</span>
+                    <span class="font-bold">${marketCap}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-neutral-600">Range</span>
+                    <span class="font-bold">${data.history && data.history.length ? `${Number(data.history[0].close).toFixed(2)} → ${Number(data.history[data.history.length - 1].close).toFixed(2)}` : 'N/A'}</span>
+                </div>
+            `;
+        }
+
+        function selectTickerQuick(symbol) {
+            const input = document.getElementById('stock-search-input');
+            if (input) input.value = symbol;
+            currentStockSymbol = symbol;
+            activeStockNewsFilter = symbol;
+            loadSelectedStock();
+            if (currentCategory === 'stocks') {
+                fetchNews();
+            }
+        }
+
+        let stockSearchSeq = 0;
+        let stockSearchTimer = null;
+
+        async function searchStocks() {
+            const input = document.getElementById('stock-search-input');
+            const query = (input.value || '').trim();
+            const suggestions = document.getElementById('stock-suggestions');
+            if (!query) {
+                suggestions.innerHTML = '';
+                return;
+            }
+
+            const seq = ++stockSearchSeq;
+            suggestions.innerHTML = '<span class="text-[10px] uppercase tracking-[0.12em] text-neutral-500">Searching...</span>';
+
+            try {
+                const res = await fetch(`/api/stocks/search?q=${encodeURIComponent(query)}`);
+                const text = await res.text();
+                if (seq !== stockSearchSeq) return;
+                let data = null;
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    suggestions.innerHTML = '<span class="text-[10px] uppercase tracking-[0.12em] text-rose-700">Server not ready — restart the app and try again.</span>';
+                    document.getElementById('stock-company').textContent = 'Stock data unavailable';
+                    return;
+                }
+
+                const results = data && data.results ? data.results : [];
+                suggestions.innerHTML = '';
+
+                const chipClass = 'px-2.5 py-1.5 rounded-full border border-black/20 bg-white text-[10px] uppercase tracking-[0.12em] font-bold text-neutral-700 hover:bg-black hover:text-white transition-all';
+                const pickSymbol = (symbol) => {
+                    selectTickerQuick(symbol);
+                };
+
+                results.forEach(item => {
+                    const chip = document.createElement('button');
+                    chip.className = chipClass;
+                    chip.textContent = `${item.symbol} · ${item.name}`;
+                    chip.onclick = () => pickSymbol(item.symbol);
+                    suggestions.appendChild(chip);
+                });
+
+                const typed = query.toUpperCase();
+                const looksLikeTicker = /^[A-Z0-9.\-^=]{1,12}$/.test(typed);
+                if (looksLikeTicker && !results.some(r => (r.symbol || '').toUpperCase() === typed)) {
+                    const direct = document.createElement('button');
+                    direct.className = chipClass + ' border-dashed';
+                    direct.textContent = `Load ticker: ${typed}`;
+                    direct.onclick = () => pickSymbol(typed);
+                    suggestions.appendChild(direct);
+                }
+
+                if (!suggestions.children.length) {
+                    suggestions.innerHTML = '<span class="text-[10px] uppercase tracking-[0.12em] text-neutral-500">No stock matches for this search.</span>';
+                }
+            } catch (err) {
+                if (seq !== stockSearchSeq) return;
+                suggestions.innerHTML = '<span class="text-[10px] uppercase tracking-[0.12em] text-rose-700">Unable to reach stock API.</span>';
+                document.getElementById('stock-company').textContent = 'Stock API unavailable';
+            }
+        }
+
+        async function loadSelectedStock() {
+            const symbol = currentStockSymbol || 'AAPL';
+            currentStockSymbol = symbol;
+            const period = document.getElementById('stock-period').value || '1y';
+            let interval = document.getElementById('stock-interval').value || '1d';
+            if ((period === '1mo' || period === '3mo') && interval === '1mo') {
+                interval = '1d';
+            }
+
+            document.getElementById('stock-symbol').textContent = symbol;
+            document.getElementById('stock-company').textContent = 'Loading market chart...';
+
+            try {
+                const res = await fetch(`/api/stocks/history?symbol=${encodeURIComponent(symbol)}&period=${encodeURIComponent(period)}&interval=${encodeURIComponent(interval)}`);
+                const text = await res.text();
+                let data = null;
+                try {
+                    data = text ? JSON.parse(text) : null;
+                } catch (e) {
+                    document.getElementById('stock-company').textContent = 'Server returned a non-JSON response';
+                    document.getElementById('stock-price').textContent = '—';
+                    document.getElementById('stock-change').textContent = 'Restart the Flask app to enable stocks';
+                    document.getElementById('stock-change').className = 'text-sm font-semibold text-amber-700';
+                    document.getElementById('stock-metrics').innerHTML = '<div class="text-sm text-amber-700">The app is serving an older page or redirect instead of the stock API.</div>';
+                    return;
+                }
+
+                if (!data || !data.history || !data.history.length) {
+                    document.getElementById('stock-company').textContent = `No market data found for "${symbol}"`;
+                    document.getElementById('stock-price').textContent = '—';
+                    document.getElementById('stock-metrics').innerHTML = '<div class="text-sm text-amber-700">Check the ticker format (Canadian stocks use .TO, e.g. SHOP.TO) or restart python app.py.</div>';
+                    return;
+                }
+
+                document.getElementById('stock-symbol').textContent = data.symbol || symbol;
+                document.getElementById('stock-company').textContent = data.name || symbol;
+                document.getElementById('stock-price').textContent = `$${Number(data.current_price || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+
+                const changeElement = document.getElementById('stock-change');
+                const isPositive = Number(data.change_percent || 0) >= 0;
+                changeElement.textContent = `${isPositive ? '▲' : '▼'} ${Number(data.change_percent || 0).toFixed(2)}%`;
+                changeElement.className = `text-sm font-semibold ${isPositive ? 'text-emerald-700' : 'text-rose-700'}`;
+                changeElement.style.color = isPositive ? 'var(--up)' : 'var(--down)';
+                renderStockMetrics(data);
+                updateStockChart(data.history);
+            } catch (err) {
+                document.getElementById('stock-company').textContent = 'Stock data unavailable';
+                document.getElementById('stock-metrics').innerHTML = '<div class="text-sm text-rose-700">Unable to load stock history right now.</div>';
+            }
+        }
+
+        async function fetchNews() {
+            const grid = document.getElementById('articles-grid');
+            grid.innerHTML = '<div class="text-center py-20 text-neutral-500 text-sm italic">Fetching live stories...</div>';
+
+            try {
+                const activeCityObj = myCities.find(c => c.name === currentCity);
+                let url = `/api/news?category=${encodeURIComponent(currentCategory)}&city=${encodeURIComponent(currentCity)}`;
+                if (currentCategory === 'stocks' && activeStockNewsFilter) {
+                    url += `&q=${encodeURIComponent(activeStockNewsFilter)}`;
+                }
+                if (activeCityObj && activeCityObj.lat != null && activeCityObj.lon != null) {
+                    url += `&lat=${encodeURIComponent(activeCityObj.lat)}&lon=${encodeURIComponent(activeCityObj.lon)}`;
+                }
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!data.success || !data.articles || !data.articles.length) {
+                    grid.innerHTML = '<div class="text-center py-20 text-neutral-500 text-sm italic">No headlines found for this query.</div>';
+                    return;
+                }
+
+                currentArticles = data.articles;
+
+                document.getElementById('ai-summary-text').innerText = data.ai_summary;
+                document.getElementById('ai-source-badge').innerText = data.ai_source;
+
+                if (currentCategory === 'city') {
+                    plotStoryMarkersOnMap();
+                }
+
+                const lead = data.articles[0];
+                const rest = data.articles.slice(1);
+                const uniqueSources = [...new Set(data.articles.map(a => a.source).filter(Boolean))].slice(0, 4).join(', ');
+                const deskLabels = {
+                    tech: 'Tech News',
+                    stocks: activeStockNewsFilter ? `${activeStockNewsFilter} & Wall Street` : 'Stocks & Wall Street',
+                    economy: 'Markets & Economy',
+                    best: 'Best Things & Picks',
+                    world: 'World Desk',
+                    city: currentCity,
+                };
+                const deskName = deskLabels[currentCategory] || 'News Desk';
+
+                grid.innerHTML = `
+                    <div class="grid gap-5 lg:grid-cols-[1.65fr_0.95fr]">
+                        <article class="lead-story story-card p-4 sm:p-5 cursor-pointer" onclick="openArticleReader(0)">
+                            <div class="section-kicker mb-3">Lead Story</div>
+                            <div class="mb-3 flex items-center justify-between gap-2 text-[11px] uppercase tracking-[0.12em] text-neutral-600">
+                                <span class="paper-chip px-2 py-1">${lead.source}</span>
+                                <span>${lead.date}</span>
+                            </div>
+                            <h2 class="mb-3">${lead.title}</h2>
+                            <p class="text-[15px] text-neutral-700 leading-relaxed mb-4">${(lead.snippet || 'A developing story is being tracked and summarized for the latest newsroom brief.').slice(0, 220)}${(lead.snippet || '').length > 220 ? '...' : ''}</p>
+                            <div class="flex items-center justify-between text-[12px] text-neutral-700 border-t border-black/20 pt-3">
+                                <span><i class="fa-solid fa-location-dot mr-1"></i>${lead.location_name || 'City Desk'}</span>
+                                <span class="font-bold uppercase tracking-[0.12em]">Read more</span>
+                            </div>
+                        </article>
+
+                        <aside class="newspaper-sidebar">
+                            <div class="section-kicker">Market Monitor</div>
+                            <div class="market-panel p-3 space-y-3">
+                                <div class="flex items-center justify-between text-[12px] uppercase tracking-[0.12em] text-neutral-700">
+                                    <span>Live Snapshot</span>
+                                    <span class="font-bold">${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                                </div>
+                                <div id="market-monitor-rows" class="space-y-2">
+                                    <div class="text-xs text-neutral-500 italic">Syncing live quotes...</div>
+                                </div>
+                            </div>
+
+                            <div class="mt-5 section-kicker">Edition Desk</div>
+                            <p class="text-[14px] leading-relaxed text-neutral-700 italic">
+                                Showing ${data.articles.length} live dispatches for <strong>${deskName}</strong> sourced from ${uniqueSources || 'keyless wire feeds'}. Click any headline to read the full story in-app.
+                            </p>
+                        </aside>
+                    </div>
+
+                    <div class="mt-6 border-t border-black/20 pt-5">
+                        <div class="section-kicker mb-4">More in the news</div>
+                        <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                            ${rest.map((article, index) => `
+                                <article class="story-card p-4 cursor-pointer" onclick="openArticleReader(${index + 1})">
+                                    <div class="mb-2 flex items-center justify-between gap-2 text-[10px] uppercase tracking-[0.12em] text-neutral-600">
+                                        <span class="paper-chip px-2 py-1">${article.source}</span>
+                                        <span>${article.date}</span>
+                                    </div>
+                                    <h3 class="mb-2">${article.title}</h3>
+                                    <p class="text-[14px] leading-relaxed line-clamp-4">${(article.snippet || '').slice(0, 180)}${(article.snippet || '').length > 180 ? '...' : ''}</p>
+                                    <div class="mt-3 text-[11px] uppercase tracking-[0.12em] text-neutral-700 border-t border-black/15 pt-2">
+                                        <span><i class="fa-solid fa-location-dot mr-1"></i>${article.location_name || 'Reporting Desk'}</span>
+                                    </div>
+                                </article>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+
+                renderMarketMonitor();
+
+            } catch (err) {
+                grid.innerHTML = '<div class="text-center py-20 text-rose-700 text-sm font-medium">Failed to load news. Ensure python app.py is running.</div>';
+            }
+        }
+
+        async function openArticleReader(index) {
+            const article = currentArticles[index];
+            if (!article) return;
+
+            document.getElementById('reader-title').innerText = article.title;
+            document.getElementById('reader-source').innerText = article.source;
+            document.getElementById('reader-date').innerText = article.date;
+
+            const loadingEl = document.getElementById('reader-loading');
+            const textEl = document.getElementById('reader-text');
+
+            loadingEl.classList.remove('hidden');
+            textEl.classList.add('hidden');
+            textEl.innerHTML = '';
+
+            document.getElementById('modal-article-reader').classList.remove('hidden');
+
+            try {
+                const res = await fetch('/api/news/read', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        url: article.link,
+                        title: article.title,
+                        source: article.source,
+                        snippet: article.snippet || "",
+                        content_encoded: article.content_encoded || ""
+                    })
+                });
+                const data = await res.json();
+
+                if (data.success && data.paragraphs && data.paragraphs.length) {
+                    document.getElementById('reader-external-link').href = data.real_url || article.link;
+
+                    textEl.innerHTML = data.paragraphs.map(item => {
+                        if (item.type === 'heading') {
+                            return `<h3 class="text-base sm:text-lg font-bold text-amber-300 mt-6 mb-3 tracking-wide border-b border-white/10 pb-2">${item.text}</h3>`;
+                        } else {
+                            return `<p class="mb-4 leading-relaxed text-slate-200 text-sm sm:text-base">${item.text}</p>`;
+                        }
+                    }).join('');
+                } else {
+                    textEl.innerHTML = `<p class="text-slate-300">${article.title}</p>`;
+                }
+                loadingEl.classList.add('hidden');
+                textEl.classList.remove('hidden');
+
+            } catch (e) {
+                textEl.innerHTML = `<p class="text-slate-300">${article.title}</p>`;
+                loadingEl.classList.add('hidden');
+                textEl.classList.remove('hidden');
+            }
+        }
+
+        function closeArticleReader() {
+            document.getElementById('modal-article-reader').classList.add('hidden');
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeArticleReader();
+        });
+
+        const stockInput = document.getElementById('stock-search-input');
+        if (stockInput) {
+            stockInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    clearTimeout(stockSearchTimer);
+                    const val = stockInput.value.trim().toUpperCase();
+                    if (/^[A-Z0-9.\-^=]{1,12}$/.test(val)) {
+                        selectTickerQuick(val);
+                    }
+                    searchStocks();
+                }
+            });
+            stockInput.addEventListener('input', () => {
+                const value = stockInput.value.trim();
+                const suggestions = document.getElementById('stock-suggestions');
+                if (!value) {
+                    suggestions.innerHTML = '';
+                    return;
+                }
+                clearTimeout(stockSearchTimer);
+                if (value.length >= 2) {
+                    stockSearchTimer = setTimeout(() => searchStocks(), 300);
+                }
+            });
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            fetchNews();
+        });
+    </script>
+
+</body>
+</html>

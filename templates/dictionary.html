@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeNest — Dictionary</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        * {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background: #090d16;
+            background-image:
+                radial-gradient(at 0% 0%, rgba(139, 92, 246, 0.24) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(6, 182, 212, 0.16) 0px, transparent 50%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #f1f5f9;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .glass-input {
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: white;
+            transition: all 0.25s ease;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(139, 92, 246, 0.65);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.22);
+            background: rgba(0, 0, 0, 0.52);
+        }
+
+        .usito-tab {
+            transition: all 0.2s ease;
+        }
+
+        .usito-tab.active {
+            background: rgba(139, 92, 246, 0.28);
+            border-color: rgba(167, 139, 250, 0.55);
+            color: #f5f3ff;
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.22);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen p-4 sm:p-6">
+    <div class="max-w-5xl mx-auto space-y-6">
+
+        <!-- Top Navigation Bar -->
+        <header class="glass-panel rounded-3xl p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3.5">
+                <div
+                    class="w-11 h-11 rounded-2xl bg-violet-500/20 border border-violet-500/40 flex items-center justify-center text-violet-300 text-lg shadow-lg">
+                    <i class="fa-solid fa-book-open"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-extrabold text-lg text-white tracking-tight">HomeNest Dictionary</h1>
+                        <span id="user-badge"
+                            class="px-2.5 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-bold uppercase tracking-wider text-slate-300">MEMBER</span>
+                    </div>
+                    <p id="header-subtitle" class="text-xs text-slate-400 font-mono">Usito-Style · Syn &amp; Ant · Verb Conjugation · Private History</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <a href="/translator"
+                    class="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-200 text-xs font-bold transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-language"></i>
+                    <span class="hidden sm:inline">Translator</span>
+                </a>
+                <a href="/"
+                    class="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-bold transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-grip"></i>
+                    <span>Hub Launcher</span>
+                </a>
+                <button onclick="signOut()"
+                    class="px-4 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all flex items-center space-x-2">
+                    <i class="fa-solid fa-right-from-bracket"></i>
+                    <span class="hidden sm:inline">Sign Out</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Search Box & 18-Language Selector -->
+        <section class="glass-panel rounded-3xl p-6 space-y-4 relative z-20">
+            <form onsubmit="event.preventDefault(); searchWord();" class="flex flex-col md:flex-row gap-3">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                    <input type="text" id="word-input" autocomplete="off"
+                        class="w-full glass-input rounded-2xl pl-11 pr-4 py-3.5 text-base font-semibold"
+                        placeholder="Rechercher un mot en français..."
+                        oninput="handleAutocomplete(this.value)">
+
+                    <!-- Live Autocomplete Dropdown -->
+                    <div id="suggestions-box"
+                        class="hidden absolute left-0 right-0 top-full mt-2 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-white/15 shadow-2xl overflow-hidden z-30">
+                    </div>
+                </div>
+
+                <div class="flex gap-2">
+                    <select id="lang-select" onchange="onLanguageChange()"
+                        class="glass-input rounded-2xl px-4 py-3.5 text-sm font-bold text-violet-200 cursor-pointer min-w-[185px]">
+                        <optgroup label="Main Languages" class="bg-slate-900 text-slate-400">
+                            <option value="fr" class="bg-slate-900 text-white" selected>Français (FR)</option>
+                            <option value="en" class="bg-slate-900 text-white">English (EN)</option>
+                            <option value="es" class="bg-slate-900 text-white">Español (ES)</option>
+                            <option value="de" class="bg-slate-900 text-white">Deutsch (DE)</option>
+                            <option value="it" class="bg-slate-900 text-white">Italiano (IT)</option>
+                            <option value="pt-BR" class="bg-slate-900 text-white">Português (PT)</option>
+                        </optgroup>
+                        <optgroup label="Asia &amp; Middle East" class="bg-slate-900 text-slate-400">
+                            <option value="zh" class="bg-slate-900 text-white">中文 Chinese (ZH)</option>
+                            <option value="ja" class="bg-slate-900 text-white">日本語 Japanese (JA)</option>
+                            <option value="ko" class="bg-slate-900 text-white">한국어 Korean (KO)</option>
+                            <option value="ar" class="bg-slate-900 text-white">العربية Arabic (AR)</option>
+                            <option value="hi" class="bg-slate-900 text-white">हिन्दी Hindi (HI)</option>
+                            <option value="tr" class="bg-slate-900 text-white">Türkçe Turkish (TR)</option>
+                        </optgroup>
+                        <optgroup label="Europe &amp; Classics" class="bg-slate-900 text-slate-400">
+                            <option value="ru" class="bg-slate-900 text-white">Русский Russian (RU)</option>
+                            <option value="nl" class="bg-slate-900 text-white">Nederlands Dutch (NL)</option>
+                            <option value="pl" class="bg-slate-900 text-white">Polski Polish (PL)</option>
+                            <option value="sv" class="bg-slate-900 text-white">Svenska Swedish (SV)</option>
+                            <option value="la" class="bg-slate-900 text-white">Latina Latin (LA)</option>
+                            <option value="el" class="bg-slate-900 text-white">Ελληνικά Greek (EL)</option>
+                        </optgroup>
+                    </select>
+
+                    <button type="submit"
+                        class="px-6 py-3.5 rounded-2xl bg-violet-500/30 hover:bg-violet-500/50 border border-violet-500/50 text-violet-100 text-sm font-bold transition-all flex items-center gap-2 whitespace-nowrap">
+                        <span id="search-btn-label">Rechercher</span>
+                        <i class="fa-solid fa-arrow-right text-xs"></i>
+                    </button>
+                </div>
+            </form>
+
+            <!-- Dynamic Sample Words -->
+            <div class="flex flex-wrap items-center gap-2 pt-1">
+                <span id="examples-label" class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mr-1">Exemples :</span>
+                <div id="starter-chips" class="flex flex-wrap items-center gap-2"></div>
+            </div>
+
+            <!-- Account-Private Recent Searches -->
+            <div id="private-history-bar" class="hidden flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-white/10">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-[11px] font-bold uppercase tracking-wider text-cyan-300 flex items-center gap-1.5 mr-1">
+                        <i class="fa-solid fa-lock text-[10px]"></i>
+                        <span id="recents-label">Historique privé :</span>
+                    </span>
+                    <div id="recent-chips" class="flex flex-wrap items-center gap-2"></div>
+                </div>
+                <button onclick="clearPrivateHistory()"
+                    class="text-[11px] font-semibold text-rose-300 hover:text-rose-200 transition-colors flex items-center gap-1">
+                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                    <span id="clear-history-label">Effacer</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- Results Container -->
+        <main id="results-area" class="space-y-5"></main>
+
+    </div>
+
+    <script>
+        const LANGUAGES = {
+            'fr': {
+                name: 'Français', dictApi: 'fr', wiki: 'fr', speech: 'fr-CA', dir: 'ltr',
+                starters: ['flâner', 'époustouflant', 'prendre', 'se lever', 'bienveillance'],
+                ui: {
+                    placeholder: 'Rechercher un mot ou un verbe en français...',
+                    searchBtn: 'Rechercher',
+                    examples: 'Exemples :',
+                    recents: 'Historique privé',
+                    clearHistory: 'Effacer',
+                    openHint: 'Consulter ↵',
+                    welcomeTitle: 'Dictionnaire Usito & Multilingue',
+                    welcomeDesc: 'Consultez les définitions numérotées, les synonymes et antonymes (Syn. / Ant.), la conjugaison complète des verbes, les exemples d’emploi et l’étymologie dans 18 langues.',
+                    loading: 'Consultation de',
+                    notFound: 'Aucune entrée trouvée pour',
+                    notFoundHint: 'Vérifiez l’orthographe, utilisez la forme à l’infinitif ou au singulier, ou essayez une autre langue.',
+                    sources: 'Sources :',
+                    pronounce: 'Prononcer',
+                    enrichBtn: 'Enrichir (Syn/Ant & Remarque IA)',
+                    enriching: 'Analyse en cours...',
+                    aiOffline: 'LM Studio n’est pas démarré sur le port 1234.',
+                    usageNote: 'Remarque :',
+                    tabAll: 'Tout l’article',
+                    tabDefs: 'Définitions',
+                    tabSynAnt: 'Syn. & Ant.',
+                    tabConj: 'Conjugaison',
+                    tabExamples: 'Exemples & Locutions',
+                    tabEtymo: 'Étymologie & Famille',
+                    conjHeading: 'Conjugaison du verbe',
+                    conjAiBtn: 'Conjuguer avec l’IA',
+                    synAntHeading: 'Synonymes & Antonymes (Syn. / Ant.)',
+                    clickWordHint: 'Cliquez sur un mot pour l’ouvrir',
+                    synBadge: 'Syn.',
+                    synTitle: 'Synonymes',
+                    noSyn: 'Aucun synonyme répertorié directement. Cliquez sur « Enrichir » ci-dessus pour en générer.',
+                    antBadge: 'Ant.',
+                    antTitle: 'Antonymes (Contraires)',
+                    noAnt: 'Aucun antonyme répertorié directement. Cliquez sur « Enrichir » ci-dessus pour en générer.',
+                    relatedTitle: 'Champ lexical & Mots associés',
+                    defsHeading: 'Définitions & Sens',
+                    examplesHeading: 'Exemples d’emploi & Locutions',
+                    noExamples: 'Aucun exemple cité pour cette entrée.',
+                    etymoHeading: 'Étymologie & Origine',
+                    noEtymo: 'Aucune notice étymologique disponible. Utilisez « Enrichir » pour obtenir l’origine du mot.'
+                }
+            },
+            'en': {
+                name: 'English', dictApi: 'en', wiki: 'en', speech: 'en-US', dir: 'ltr',
+                starters: ['serendipity', 'write', 'ephemeral', 'understand', 'luminous'],
+                ui: {
+                    placeholder: 'Look up any word or verb in English...',
+                    searchBtn: 'Look Up',
+                    examples: 'Examples:',
+                    recents: 'Private History',
+                    clearHistory: 'Clear',
+                    openHint: 'Look up ↵',
+                    welcomeTitle: 'Usito-Style & Multilingual Dictionary',
+                    welcomeDesc: 'Explore numbered definitions, synonyms and antonyms (Syn. / Ant.), verb conjugations, usage examples, and etymology across 18 languages.',
+                    loading: 'Looking up',
+                    notFound: 'No entry found for',
+                    notFoundHint: 'Check your spelling, try the base form of the word, or switch languages.',
+                    sources: 'Sources:',
+                    pronounce: 'Pronounce',
+                    enrichBtn: 'Enrich (Syn/Ant & AI Note)',
+                    enriching: 'Analyzing...',
+                    aiOffline: 'LM Studio is not running on port 1234.',
+                    usageNote: 'Usage Note:',
+                    tabAll: 'Full Entry',
+                    tabDefs: 'Definitions',
+                    tabSynAnt: 'Syn. & Ant.',
+                    tabConj: 'Conjugation',
+                    tabExamples: 'Examples & Phrases',
+                    tabEtymo: 'Etymology & Origin',
+                    conjHeading: 'Verb Conjugation',
+                    conjAiBtn: 'Conjugate with AI',
+                    synAntHeading: 'Synonyms & Antonyms (Syn. / Ant.)',
+                    clickWordHint: 'Click any word to open it',
+                    synBadge: 'Syn.',
+                    synTitle: 'Synonyms',
+                    noSyn: 'No direct synonyms listed. Click "Enrich" above to generate them.',
+                    antBadge: 'Ant.',
+                    antTitle: 'Antonyms (Opposites)',
+                    noAnt: 'No direct antonyms listed. Click "Enrich" above to generate them.',
+                    relatedTitle: 'Lexical Field & Related Words',
+                    defsHeading: 'Definitions & Meanings',
+                    examplesHeading: 'Usage Examples & Phrases',
+                    noExamples: 'No usage examples cited for this entry.',
+                    etymoHeading: 'Etymology & Origin',
+                    noEtymo: 'No etymology note available. Click "Enrich" above to generate word origin.'
+                }
+            },
+            'es': {
+                name: 'Español', dictApi: 'es', wiki: 'es', speech: 'es-ES', dir: 'ltr',
+                starters: ['hablar', 'efímero', 'vivir', 'resiliencia', 'escribir'],
+                ui: {
+                    placeholder: 'Buscar una palabra o verbo en español...',
+                    searchBtn: 'Buscar',
+                    examples: 'Ejemplos:',
+                    recents: 'Historial privado',
+                    clearHistory: 'Borrar',
+                    openHint: 'Consultar ↵',
+                    welcomeTitle: 'Diccionario estilo Usito y Multilingüe',
+                    welcomeDesc: 'Consulta definiciones numeradas, sinónimos y antónimos (Sin. / Ant.), conjugación verbal, ejemplos de uso y etimología en 18 idiomas.',
+                    loading: 'Buscando',
+                    notFound: 'No se encontró ninguna entrada para',
+                    notFoundHint: 'Revisa la ortografía, usa el infinitivo o singular, o cambia de idioma.',
+                    sources: 'Fuentes:',
+                    pronounce: 'Pronunciar',
+                    enrichBtn: 'Enriquecer (Sin/Ant y Nota IA)',
+                    enriching: 'Analizando...',
+                    aiOffline: 'LM Studio no está activo en el puerto 1234.',
+                    usageNote: 'Nota de uso:',
+                    tabAll: 'Artículo completo',
+                    tabDefs: 'Definiciones',
+                    tabSynAnt: 'Sin. y Ant.',
+                    tabConj: 'Conjugación',
+                    tabExamples: 'Ejemplos y Locuciones',
+                    tabEtymo: 'Etimología y Origen',
+                    conjHeading: 'Conjugación del verbo',
+                    conjAiBtn: 'Conjugar con IA',
+                    synAntHeading: 'Sinónimos y Antónimos (Sin. / Ant.)',
+                    clickWordHint: 'Haz clic en una palabra para abrirla',
+                    synBadge: 'Sin.',
+                    synTitle: 'Sinónimos',
+                    noSyn: 'No hay sinónimos directos. Haz clic en «Enriquecer» arriba para generarlos.',
+                    antBadge: 'Ant.',
+                    antTitle: 'Antónimos (Contrarios)',
+                    noAnt: 'No hay antónimos directos. Haz clic en «Enriquecer» arriba para generarlos.',
+                    relatedTitle: 'Campo léxico y Palabras relacionadas',
+                    defsHeading: 'Definiciones y Acepciones',
+                    examplesHeading: 'Ejemplos de uso y Locuciones',
+                    noExamples: 'No hay ejemplos disponibles para esta entrada.',
+                    etymoHeading: 'Etimología y Origen',
+                    noEtymo: 'No hay nota etimológica disponible. Usa «Enriquecer» para obtener el origen.'
+                }
+            },
+            'de': {
+                name: 'Deutsch', dictApi: 'de', wiki: 'de', speech: 'de-DE', dir: 'ltr',
+                starters: ['lernen', 'Fernweh', 'sprechen', 'Gemütlichkeit'],
+                ui: {
+                    placeholder: 'Ein Wort oder Verb auf Deutsch nachschlagen...',
+                    searchBtn: 'Suchen',
+                    examples: 'Beispiele:',
+                    recents: 'Privater Verlauf',
+                    clearHistory: 'Löschen',
+                    openHint: 'Öffnen ↵',
+                    welcomeTitle: 'Usito-Stil & Mehrsprachiges Wörterbuch',
+                    welcomeDesc: 'Nummerierte Definitionen, Synonyme und Antonyme, Verbkonjugation, Verwendungsbeispiele und Etymologie in 18 Sprachen.',
+                    loading: 'Suche nach',
+                    notFound: 'Kein Eintrag gefunden für',
+                    notFoundHint: 'Überprüfen Sie die Rechtschreibung oder wechseln Sie die Sprache.',
+                    sources: 'Quellen:',
+                    pronounce: 'Aussprechen',
+                    enrichBtn: 'Erweitern (Syn/Ant & KI)',
+                    enriching: 'Analysiere...',
+                    aiOffline: 'LM Studio läuft nicht auf Port 1234.',
+                    usageNote: 'Hinweis:',
+                    tabAll: 'Gesamter Artikel',
+                    tabDefs: 'Definitionen',
+                    tabSynAnt: 'Syn. & Ant.',
+                    tabConj: 'Konjugation',
+                    tabExamples: 'Beispiele & Wendungen',
+                    tabEtymo: 'Etymologie & Herkunft',
+                    conjHeading: 'Verbkonjugation',
+                    conjAiBtn: 'Mit KI konjugieren',
+                    synAntHeading: 'Synonyme & Antonyme (Syn. / Ant.)',
+                    clickWordHint: 'Klicken Sie auf ein Wort, um es zu öffnen',
+                    synBadge: 'Syn.',
+                    synTitle: 'Synonyme',
+                    noSyn: 'Keine direkten Synonyme gefunden.',
+                    antBadge: 'Ant.',
+                    antTitle: 'Antonyme (Gegenteile)',
+                    noAnt: 'Keine direkten Antonyme gefunden.',
+                    relatedTitle: 'Wortfeld & Verwandte Wörter',
+                    defsHeading: 'Definitionen & Bedeutungen',
+                    examplesHeading: 'Verwendungsbeispiele',
+                    noExamples: 'Keine Beispiele vorhanden.',
+                    etymoHeading: 'Etymologie & Herkunft',
+                    noEtymo: 'Keine Herkunftsangabe verfügbar.'
+                }
+            },
+            'it': {
+                name: 'Italiano', dictApi: 'it', wiki: 'it', speech: 'it-IT', dir: 'ltr',
+                starters: ['parlare', 'meraviglia', 'scrivere', 'effimero'],
+                ui: {
+                    placeholder: 'Cerca una parola o un verbo in italiano...',
+                    searchBtn: 'Cerca',
+                    examples: 'Esempi:',
+                    recents: 'Cronologia privata',
+                    clearHistory: 'Cancella',
+                    openHint: 'Apri ↵',
+                    welcomeTitle: 'Dizionario stile Usito e Multilingue',
+                    welcomeDesc: 'Consulta definizioni numerate, sinonimi e contrari, coniugazione dei verbi, esempi d’uso ed etimologia in 18 lingue.',
+                    loading: 'Ricerca di',
+                    notFound: 'Nessuna voce trovata per',
+                    notFoundHint: 'Controlla l’ortografia o cambia lingua.',
+                    sources: 'Fonti:',
+                    pronounce: 'Pronuncia',
+                    enrichBtn: 'Arricchisci (Sin/Ant e IA)',
+                    enriching: 'Analisi in corso...',
+                    aiOffline: 'LM Studio non è attivo sulla porta 1234.',
+                    usageNote: 'Nota d’uso:',
+                    tabAll: 'Voce completa',
+                    tabDefs: 'Definizioni',
+                    tabSynAnt: 'Sin. e Ant.',
+                    tabConj: 'Coniugazione',
+                    tabExamples: 'Esempi e Locuzioni',
+                    tabEtymo: 'Etimologia e Origine',
+                    conjHeading: 'Coniugazione del verbo',
+                    conjAiBtn: 'Coniuga con IA',
+                    synAntHeading: 'Sinonimi e Contrari (Sin. / Ant.)',
+                    clickWordHint: 'Clicca su una parola per aprirla',
+                    synBadge: 'Sin.',
+                    synTitle: 'Sinonimi',
+                    noSyn: 'Nessun sinonimo diretto.',
+                    antBadge: 'Ant.',
+                    antTitle: 'Contrari (Antonimi)',
+                    noAnt: 'Nessun contrario diretto.',
+                    relatedTitle: 'Campo lessicale e Parole correlate',
+                    defsHeading: 'Definizioni e Significati',
+                    examplesHeading: 'Esempi d’uso',
+                    noExamples: 'Nessun esempio disponibile.',
+                    etymoHeading: 'Etimologia e Origine',
+                    noEtymo: 'Nessuna nota etimologica disponibile.'
+                }
+            },
+            'pt-BR': {
+                name: 'Português', dictApi: 'pt-BR', wiki: 'pt', speech: 'pt-BR', dir: 'ltr',
+                starters: ['falar', 'saudade', 'viver', 'efêmero'],
+                ui: {
+                    placeholder: 'Pesquisar uma palavra ou verbo em português...',
+                    searchBtn: 'Pesquisar',
+                    examples: 'Exemplos:',
+                    recents: 'Histórico privado',
+                    clearHistory: 'Limpar',
+                    openHint: 'Abrir ↵',
+                    welcomeTitle: 'Dicionário estilo Usito e Multilíngue',
+                    welcomeDesc: 'Consulte definições numeradas, sinônimos e antônimos, conjugação verbal, exemplos de uso e etimologia em 18 idiomas.',
+                    loading: 'Pesquisando',
+                    notFound: 'Nenhuma entrada encontrada para',
+                    notFoundHint: 'Verifique a ortografia ou mude o idioma.',
+                    sources: 'Fontes:',
+                    pronounce: 'Pronunciar',
+                    enrichBtn: 'Enriquecer (Sin/Ant e IA)',
+                    enriching: 'Analisando...',
+                    aiOffline: 'LM Studio não está ativo na porta 1234.',
+                    usageNote: 'Nota de uso:',
+                    tabAll: 'Artigo completo',
+                    tabDefs: 'Definições',
+                    tabSynAnt: 'Sin. e Ant.',
+                    tabConj: 'Conjugação',
+                    tabExamples: 'Exemplos e Locuções',
+                    tabEtymo: 'Etimologia e Origem',
+                    conjHeading: 'Conjugação do verbo',
+                    conjAiBtn: 'Conjugar com IA',
+                    synAntHeading: 'Sinônimos e Antônimos (Sin. / Ant.)',
+                    clickWordHint: 'Clique em uma palavra para abri-la',
+                    synBadge: 'Sin.',
+                    synTitle: 'Sinônimos',
+                    noSyn: 'Nenhum sinônimo direto.',
+                    antBadge: 'Ant.',
+                    antTitle: 'Antônimos (Contrários)',
+                    noAnt: 'Nenhum antônimo direto.',
+                    relatedTitle: 'Campo lexical e Palavras associadas',
+                    defsHeading: 'Definições e Sentidos',
+                    examplesHeading: 'Exemplos de uso',
+                    noExamples: 'Nenhum exemplo citado.',
+                    etymoHeading: 'Etimologia e Origem',
+                    noEtymo: 'Nenhuma informação etimológica disponível.'
+                }
+            }
+        };
+
+        const EXTRA_LANGS = {
+            'zh': { name: '中文 (Chinese)', dictApi: null, wiki: 'zh', speech: 'zh-CN', dir: 'ltr', starters: ['学习', '山水', '智慧', '宇宙'], tabConj: '动词变位', conjHeading: '动词变位与用法' },
+            'ja': { name: '日本語 (Japanese)', dictApi: 'ja', wiki: 'ja', speech: 'ja-JP', dir: 'ltr', starters: ['学ぶ', '木漏れ日', '物語', '希望'], tabConj: '活用', conjHeading: '動詞の活用' },
+            'ko': { name: '한국어 (Korean)', dictApi: 'ko', wiki: 'ko', speech: 'ko-KR', dir: 'ltr', starters: ['배우다', '하늘', '사랑', '지혜'], tabConj: '활용', conjHeading: '동사 활용' },
+            'ar': { name: 'العربية (Arabic)', dictApi: 'ar', wiki: 'ar', speech: 'ar-SA', dir: 'rtl', starters: ['كتب', 'سلام', 'حكمة', 'أمل'], tabConj: 'تصريف', conjHeading: 'تصريف الفعل' },
+            'hi': { name: 'हिन्दी (Hindi)', dictApi: 'hi', wiki: 'hi', speech: 'hi-IN', dir: 'ltr', starters: ['लिखना', 'नमस्ते', 'ज्ञान', 'शांति'], tabConj: 'क्रिया रूप', conjHeading: 'क्रिया के रूप' },
+            'tr': { name: 'Türkçe (Turkish)', dictApi: 'tr', wiki: 'tr', speech: 'tr-TR', dir: 'ltr', starters: ['yazmak', 'yakamoz', 'huzur', 'umut'], tabConj: 'Çekim', conjHeading: 'Fiil Çekimi' },
+            'ru': { name: 'Русский (Russian)', dictApi: 'ru', wiki: 'ru', speech: 'ru-RU', dir: 'ltr', starters: ['читать', 'вдохновение', 'гармония', 'свет'], tabConj: 'Спряжение', conjHeading: 'Спряжение глагола' },
+            'nl': { name: 'Nederlands (Dutch)', dictApi: null, wiki: 'nl', speech: 'nl-NL', dir: 'ltr', starters: ['spreken', 'gezellig', 'vrijheid', 'licht'], tabConj: 'Vervoeging', conjHeading: 'Werkwoordvervoeging' },
+            'pl': { name: 'Polski (Polish)', dictApi: null, wiki: 'pl', speech: 'pl-PL', dir: 'ltr', starters: ['pisać', 'wolność', 'nadzieja', 'światło'], tabConj: 'Odmiana', conjHeading: 'Odmiana czasownika' },
+            'sv': { name: 'Svenska (Swedish)', dictApi: null, wiki: 'sv', speech: 'sv-SE', dir: 'ltr', starters: ['tala', 'lagom', 'frihet', 'ljus'], tabConj: 'Böjning', conjHeading: 'Verbböjning' },
+            'la': { name: 'Latina (Latin)', dictApi: null, wiki: 'la', speech: 'it-IT', dir: 'ltr', starters: ['amare', 'terra', 'sapientia', 'lux'], tabConj: 'Coniugatio', conjHeading: 'Coniugatio Verbi' },
+            'el': { name: 'Ελληνικά (Greek)', dictApi: null, wiki: 'el', speech: 'el-GR', dir: 'ltr', starters: ['γράφω', 'φιλοσοφία', 'αρμονία', 'φως'], tabConj: 'Κλίση', conjHeading: 'Κλίση Ρήματος' }
+        };
+
+        for (const [code, meta] of Object.entries(EXTRA_LANGS)) {
+            LANGUAGES[code] = {
+                ...meta,
+                ui: {
+                    ...LANGUAGES['en'].ui,
+                    placeholder: `Look up a word in ${meta.name}...`,
+                    tabConj: meta.tabConj,
+                    conjHeading: meta.conjHeading
+                }
+            };
+        }
+
+        let autocompleteTimer = null;
+        let currentAudioUrl = null;
+        let activeTab = 'all';
+        let currentEntryData = null;
+        let currentUser = null;
+        let recentWords = [];
+
+        function getCurrentCfg() {
+            const lang = document.getElementById('lang-select').value;
+            return LANGUAGES[lang] || LANGUAGES['fr'];
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '').replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        function stripHtml(htmlStr) {
+            const doc = new DOMParser().parseFromString(String(htmlStr ?? ''), 'text/html');
+            return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+        }
+
+        function getAccountStorageKey() {
+            if (!currentUser) return null;
+            const idPart = currentUser.id ?? currentUser.user_id ?? currentUser.username;
+            return `homenest_dict_history_${idPart}`;
+        }
+
+        async function loadPrivateHistory() {
+            if (!currentUser) return;
+            try {
+                const res = await fetch('/api/history/dictionary');
+                if (res.ok) {
+                    const data = await res.json();
+                    recentWords = Array.isArray(data.items) ? data.items : [];
+                    const key = getAccountStorageKey();
+                    if (key) localStorage.setItem(key, JSON.stringify(recentWords));
+                    renderRecentChips();
+                    return;
+                }
+            } catch (_) {}
+
+            const key = getAccountStorageKey();
+            recentWords = key ? JSON.parse(localStorage.getItem(key) || '[]') : [];
+            renderRecentChips();
+        }
+
+        async function saveRecentWord(word, lang) {
+            if (!currentUser) return;
+            const clean = word.trim();
+            const entry = { word: clean, lang };
+            recentWords = [
+                entry,
+                ...recentWords.filter(w => !(w.word.toLowerCase() === clean.toLowerCase() && w.lang === lang))
+            ].slice(0, 8);
+            renderRecentChips();
+
+            const key = getAccountStorageKey();
+            if (key) localStorage.setItem(key, JSON.stringify(recentWords));
+
+            try {
+                await fetch('/api/history/dictionary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ item: entry })
+                });
+            } catch (_) {}
+        }
+
+        async function clearPrivateHistory() {
+            recentWords = [];
+            renderRecentChips();
+            const key = getAccountStorageKey();
+            if (key) localStorage.removeItem(key);
+            try {
+                await fetch('/api/history/dictionary', { method: 'DELETE' });
+            } catch (_) {}
+        }
+
+        async function verifyAuth() {
+            // Remove legacy shared localStorage key so history is strictly per-account
+            localStorage.removeItem('homenest_dict_recent_v2');
+            localStorage.removeItem('homenest_dict_recent');
+
+            try {
+                const res = await fetch('/api/me');
+                if (!res.ok) {
+                    window.location.href = '/';
+                    return;
+                }
+                currentUser = await res.json();
+                document.getElementById('user-badge').innerText = `${currentUser.username} · ${currentUser.role}`;
+                applyLanguageUI();
+                await loadPrivateHistory();
+            } catch (_) {
+                window.location.href = '/';
+            }
+        }
+
+        async function signOut() {
+            await fetch('/api/logout', { method: 'POST' });
+            window.location.href = '/';
+        }
+
+        function applyLanguageUI() {
+            const lang = document.getElementById('lang-select').value;
+            const cfg = getCurrentCfg();
+            const ui = cfg.ui;
+
+            document.documentElement.lang = lang;
+            document.documentElement.dir = cfg.dir || 'ltr';
+            document.getElementById('word-input').placeholder = ui.placeholder;
+            document.getElementById('search-btn-label').innerText = ui.searchBtn;
+            document.getElementById('examples-label').innerText = ui.examples;
+            document.getElementById('clear-history-label').innerText = ui.clearHistory;
+            const ownerTag = currentUser ? ` (${currentUser.username})` : '';
+            document.getElementById('recents-label').innerText = `${ui.recents}${ownerTag} :`;
+
+            renderStarterChips();
+            renderRecentChips();
+        }
+
+        function renderEmptyState() {
+            const ui = getCurrentCfg().ui;
+            document.getElementById('results-area').innerHTML = `
+                <div class="glass-panel rounded-3xl p-10 text-center space-y-3">
+                    <div
+                        class="w-16 h-16 rounded-2xl bg-violet-500/15 border border-violet-500/30 flex items-center justify-center mx-auto text-violet-300 text-2xl">
+                        <i class="fa-solid fa-spell-check"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-white">${escapeHtml(ui.welcomeTitle)}</h2>
+                    <p class="text-xs text-slate-400 max-w-lg mx-auto leading-relaxed">
+                        ${escapeHtml(ui.welcomeDesc)}
+                    </p>
+                </div>
+            `;
+        }
+
+        function renderStarterChips() {
+            const cfg = getCurrentCfg();
+            const box = document.getElementById('starter-chips');
+            box.innerHTML = cfg.starters.map(w => `
+                <button onclick="quickLookup('${escapeHtml(w)}')"
+                    class="px-3 py-1 rounded-full bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/40 text-xs text-slate-300 transition-all">
+                    ${escapeHtml(w)}
+                </button>
+            `).join('');
+        }
+
+        function renderRecentChips() {
+            const bar = document.getElementById('private-history-bar');
+            const box = document.getElementById('recent-chips');
+            if (!recentWords.length) {
+                bar.classList.add('hidden');
+                box.innerHTML = '';
+                return;
+            }
+            bar.classList.remove('hidden');
+            box.innerHTML = recentWords.map(item => `
+                <button onclick="quickLookup('${escapeHtml(item.word)}', '${escapeHtml(item.lang)}')"
+                    class="px-3 py-1 rounded-full bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/25 text-xs text-cyan-200 transition-all">
+                    ${escapeHtml(item.word)} <span class="opacity-60 text-[10px] uppercase">${escapeHtml(item.lang)}</span>
+                </button>
+            `).join('');
+        }
+
+        function onLanguageChange() {
+            applyLanguageUI();
+            const currentWord = document.getElementById('word-input').value.trim();
+            if (currentWord) {
+                searchWord();
+            } else {
+                currentEntryData = null;
+                renderEmptyState();
+            }
+        }
+
+        function quickLookup(word, langOverride = null) {
+            if (langOverride && LANGUAGES[langOverride]) {
+                document.getElementById('lang-select').value = langOverride;
+                applyLanguageUI();
+            }
+            document.getElementById('word-input').value = word;
+            hideSuggestions();
+            searchWord();
+        }
+
+        function hideSuggestions() {
+            const box = document.getElementById('suggestions-box');
+            box.classList.add('hidden');
+            box.innerHTML = '';
+        }
+
+        function handleAutocomplete(val) {
+            clearTimeout(autocompleteTimer);
+            const query = val.trim();
+            const lang = document.getElementById('lang-select').value;
+            const cfg = getCurrentCfg();
+
+            if (query.length < 2) {
+                hideSuggestions();
+                return;
+            }
+
+            autocompleteTimer = setTimeout(async () => {
+                try {
+                    let suggestions = [];
+                    if (lang === 'en' || lang === 'es') {
+                        const vParam = lang === 'es' ? 'v=es&' : '';
+                        const res = await fetch(`https://api.datamuse.com/words?${vParam}sp=${encodeURIComponent(query)}*&max=6`);
+                        const items = await res.json();
+                        suggestions = items.map(i => i.word);
+                    } else {
+                        const wikiCode = cfg.wiki || 'fr';
+                        const res = await fetch(`https://${wikiCode}.wiktionary.org/w/api.php?action=opensearch&search=${encodeURIComponent(query)}&limit=6&format=json&origin=*`);
+                        const data = await res.json();
+                        suggestions = Array.isArray(data[1]) ? data[1] : [];
+                    }
+
+                    const box = document.getElementById('suggestions-box');
+                    if (!suggestions.length) {
+                        hideSuggestions();
+                        return;
+                    }
+
+                    box.innerHTML = suggestions.map(w => `
+                        <button type="button" onclick="quickLookup('${escapeHtml(w)}')"
+                            class="w-full text-left px-4 py-2.5 text-sm text-slate-200 hover:bg-violet-500/25 flex items-center justify-between border-b border-white/5 last:border-none transition-colors">
+                            <span class="font-medium">${escapeHtml(w)}</span>
+                            <span class="text-[11px] font-mono text-slate-400">${escapeHtml(cfg.ui.openHint)}</span>
+                        </button>
+                    `).join('');
+                    box.classList.remove('hidden');
+                } catch (_) {
+                    hideSuggestions();
+                }
+            }, 180);
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#word-input') && !e.target.closest('#suggestions-box')) {
+                hideSuggestions();
+            }
+        });
+
+        function playPronunciation() {
+            if (currentAudioUrl) {
+                const audio = new Audio(currentAudioUrl);
+                audio.play().catch(() => speakFallback());
+            } else {
+                speakFallback();
+            }
+        }
+
+        function speakFallback() {
+            if (!currentEntryData || !('speechSynthesis' in window)) return;
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(currentEntryData.word);
+            const cfg = LANGUAGES[currentEntryData.lang] || LANGUAGES['fr'];
+            utter.lang = cfg.speech;
+            utter.rate = 0.95;
+            window.speechSynthesis.speak(utter);
+        }
+
+        /* ==============================================================
+           VERB DETECTION & CONJUGATION ENGINE (FR, EN, ES, IT, PT, DE + AI)
+           ============================================================== */
+        function isVerbEntry(entry) {
+            return (entry.meanings || []).some(m =>
+                /\b(verb|verbe|verbo|verbum|werkwoord|czasownik|fiil)\b|глагол|動詞|동사|فعل|क्रिया|ῥῆμα/i.test(m.partOfSpeech || '')
+            );
+        }
+
+        const FR_ETRE_VERBS = new Set([
+            'aller', 'arriver', 'descendre', 'redescendre', 'entrer', 'rentrer', 'monter', 'remonter',
+            'mourir', 'naître', 'renaître', 'partir', 'repartir', 'passer', 'repasser', 'rester',
+            'retourner', 'sortir', 'ressortir', 'tomber', 'retomber', 'venir', 'devenir', 'revenir',
+            'parvenir', 'intervenir', 'survenir', 'advenir'
+        ]);
+
+        const FR_IRREGULAR = {
+            'être': {
+                group: '3e groupe (Auxiliaire)', aux: 'avoir', pp: 'été', ppres: 'étant',
+                pres: ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'],
+                imp: ['étais', 'étais', 'était', 'étions', 'étiez', 'étaient'],
+                fut: ['serai', 'seras', 'sera', 'serons', 'serez', 'seront'],
+                cond: ['serais', 'serais', 'serait', 'serions', 'seriez', 'seraient'],
+                subj: ['sois', 'sois', 'soit', 'soyons', 'soyez', 'soient']
+            },
+            'avoir': {
+                group: '3e groupe (Auxiliaire)', aux: 'avoir', pp: 'eu', ppres: 'ayant',
+                pres: ['ai', 'as', 'a', 'avons', 'avez', 'ont'],
+                imp: ['avais', 'avais', 'avait', 'avions', 'aviez', 'avaient'],
+                fut: ['aurai', 'auras', 'aura', 'aurons', 'aurez', 'auront'],
+                cond: ['aurais', 'aurais', 'aurait', 'aurions', 'auriez', 'auraient'],
+                subj: ['aie', 'aies', 'ait', 'ayons', 'ayez', 'aient']
+            },
+            'aller': {
+                group: '3e groupe', aux: 'être', pp: 'allé', ppres: 'allant',
+                pres: ['vais', 'vas', 'va', 'allons', 'allez', 'vont'],
+                imp: ['allais', 'allais', 'allait', 'allions', 'alliez', 'allaient'],
+                fut: ['irai', 'iras', 'ira', 'irons', 'irez', 'iront'],
+                cond: ['irais', 'irais', 'irait', 'irions', 'iriez', 'iraient'],
+                subj: ['aille', 'ailles', 'aille', 'allions', 'alliez', 'aillent']
+            },
+            'faire': {
+                group: '3e groupe', aux: 'avoir', pp: 'fait', ppres: 'faisant',
+                pres: ['fais', 'fais', 'fait', 'faisons', 'faites', 'font'],
+                imp: ['faisais', 'faisais', 'faisait', 'faisions', 'faisiez', 'faisaient'],
+                fut: ['ferai', 'feras', 'fera', 'ferons', 'ferez', 'feront'],
+                cond: ['ferais', 'ferais', 'ferait', 'ferions', 'feriez', 'feraient'],
+                subj: ['fasse', 'fasses', 'fasse', 'fassions', 'fassiez', 'fassent']
+            },
+            'dire': {
+                group: '3e groupe', aux: 'avoir', pp: 'dit', ppres: 'disant',
+                pres: ['dis', 'dis', 'dit', 'disons', 'dites', 'disent'],
+                imp: ['disais', 'disais', 'disait', 'disions', 'disiez', 'disaient'],
+                fut: ['dirai', 'diras', 'dira', 'dirons', 'direz', 'diront'],
+                cond: ['dirais', 'dirais', 'dirait', 'dirions', 'diriez', 'diraient'],
+                subj: ['dise', 'dises', 'dise', 'disions', 'disiez', 'disent']
+            },
+            'pouvoir': {
+                group: '3e groupe', aux: 'avoir', pp: 'pu', ppres: 'pouvant',
+                pres: ['peux', 'peux', 'peut', 'pouvons', 'pouvez', 'peuvent'],
+                imp: ['pouvais', 'pouvais', 'pouvait', 'pouvions', 'pouviez', 'pouvaient'],
+                fut: ['pourrai', 'pourras', 'pourra', 'pourrons', 'pourrez', 'pourront'],
+                cond: ['pourrais', 'pourrais', 'pourrait', 'pourrions', 'pourriez', 'pourraient'],
+                subj: ['puisse', 'puisses', 'puisse', 'puissions', 'puissiez', 'puissent']
+            },
+            'vouloir': {
+                group: '3e groupe', aux: 'avoir', pp: 'voulu', ppres: 'voulant',
+                pres: ['veux', 'veux', 'veut', 'voulons', 'voulez', 'veulent'],
+                imp: ['voulais', 'voulais', 'voulait', 'voulions', 'vouliez', 'voulaient'],
+                fut: ['voudrai', 'voudras', 'voudra', 'voudrons', 'voudrez', 'voudront'],
+                cond: ['voudrais', 'voudrais', 'voudrait', 'voudrions', 'voudriez', 'voudraient'],
+                subj: ['veuille', 'veuilles', 'veuille', 'voulions', 'vouliez', 'veuillent']
+            },
+            'savoir': {
+                group: '3e groupe', aux: 'avoir', pp: 'su', ppres: 'sachant',
+                pres: ['sais', 'sais', 'sait', 'savons', 'savez', 'savent'],
+                imp: ['savais', 'savais', 'savait', 'savions', 'saviez', 'savaient'],
+                fut: ['saurai', 'sauras', 'saura', 'saurons', 'saurez', 'sauront'],
+                cond: ['saurais', 'saurais', 'saurait', 'saurions', 'sauriez', 'sauraient'],
+                subj: ['sache', 'saches', 'sache', 'sachions', 'sachiez', 'sachent']
+            },
+            'voir': {
+                group: '3e groupe', aux: 'avoir', pp: 'vu', ppres: 'voyant',
+                pres: ['vois', 'vois', 'voit', 'voyons', 'voyez', 'voient'],
+                imp: ['voyais', 'voyais', 'voyait', 'voyions', 'voyiez', 'voyaient'],
+                fut: ['verrai', 'verras', 'verra', 'verrons', 'verrez', 'verront'],
+                cond: ['verrais', 'verrais', 'verrait', 'verrions', 'verriez', 'verraient'],
+                subj: ['voie', 'voies', 'voie', 'voyions', 'voyiez', 'voient']
+            },
+            'devoir': {
+                group: '3e groupe', aux: 'avoir', pp: 'dû', ppres: 'devant',
+                pres: ['dois', 'dois', 'doit', 'devons', 'devez', 'doivent'],
+                imp: ['devais', 'devais', 'devait', 'devions', 'deviez', 'devaient'],
+                fut: ['devrai', 'devras', 'devra', 'devrons', 'devrez', 'devront'],
+                cond: ['devrais', 'devrais', 'devrait', 'devrions', 'devriez', 'devraient'],
+                subj: ['doive', 'doives', 'doive', 'devions', 'deviez', 'doivent']
+            },
+            'boire': {
+                group: '3e groupe', aux: 'avoir', pp: 'bu', ppres: 'buvant',
+                pres: ['bois', 'bois', 'boit', 'buvons', 'buvez', 'boivent'],
+                imp: ['buvais', 'buvais', 'buvait', 'buvions', 'buviez', 'buvaient'],
+                fut: ['boirai', 'boiras', 'boira', 'boirons', 'boirez', 'boiront'],
+                cond: ['boirais', 'boirais', 'boirait', 'boirions', 'boiriez', 'boiraient'],
+                subj: ['boive', 'boives', 'boive', 'buvions', 'buviez', 'boivent']
+            },
+            'croire': {
+                group: '3e groupe', aux: 'avoir', pp: 'cru', ppres: 'croyant',
+                pres: ['crois', 'crois', 'croit', 'croyons', 'croyez', 'croient'],
+                imp: ['croyais', 'croyais', 'croyait', 'croyions', 'croyiez', 'croyaient'],
+                fut: ['croirai', 'croiras', 'croira', 'croirons', 'croirez', 'croiront'],
+                cond: ['croirais', 'croirais', 'croirait', 'croirions', 'croiriez', 'croiraient'],
+                subj: ['croie', 'croies', 'croie', 'croyions', 'croyiez', 'croient']
+            },
+            'lire': {
+                group: '3e groupe', aux: 'avoir', pp: 'lu', ppres: 'lisant',
+                pres: ['lis', 'lis', 'lit', 'lisons', 'lisez', 'lisent'],
+                imp: ['lisais', 'lisais', 'lisait', 'lisions', 'lisiez', 'lisaient'],
+                fut: ['lirai', 'liras', 'lira', 'lirons', 'lirez', 'liront'],
+                cond: ['lirais', 'lirais', 'lirait', 'lirions', 'liriez', 'liraient'],
+                subj: ['lise', 'lises', 'lise', 'lisions', 'lisiez', 'lisent']
+            },
+            'écrire': {
+                group: '3e groupe', aux: 'avoir', pp: 'écrit', ppres: 'écrivant',
+                pres: ['écris', 'écris', 'écrit', 'écrivons', 'écrivez', 'écrivent'],
+                imp: ['écrivais', 'écrivais', 'écrivait', 'écrivions', 'écriviez', 'écrivaient'],
+                fut: ['écrirai', 'écriras', 'écrira', 'écrirons', 'écrirez', 'écriront'],
+                cond: ['écrirais', 'écrirais', 'écrirait', 'écririons', 'écririez', 'écriraient'],
+                subj: ['écrive', 'écrives', 'écrive', 'écrivions', 'écriviez', 'écrivent']
+            },
+            'vivre': {
+                group: '3e groupe', aux: 'avoir', pp: 'vécu', ppres: 'vivant',
+                pres: ['vis', 'vis', 'vit', 'vivons', 'vivez', 'vivent'],
+                imp: ['vivais', 'vivais', 'vivait', 'vivions', 'viviez', 'vivaient'],
+                fut: ['vivrai', 'vivras', 'vivra', 'vivrons', 'vivrez', 'vivront'],
+                cond: ['vivrais', 'vivrais', 'vivrait', 'vivrions', 'vivriez', 'vivraient'],
+                subj: ['vive', 'vives', 'vive', 'vivions', 'viviez', 'vivent']
+            },
+            'suivre': {
+                group: '3e groupe', aux: 'avoir', pp: 'suivi', ppres: 'suivant',
+                pres: ['suis', 'suis', 'suit', 'suivons', 'suivez', 'suivent'],
+                imp: ['suivais', 'suivais', 'suivait', 'suivions', 'suiviez', 'suivaient'],
+                fut: ['suivrai', 'suivras', 'suivra', 'suivrons', 'suivrez', 'suivront'],
+                cond: ['suivrais', 'suivrais', 'suivrait', 'suivrions', 'suivriez', 'suivraient'],
+                subj: ['suive', 'suives', 'suive', 'suivions', 'suiviez', 'suivent']
+            },
+            'courir': {
+                group: '3e groupe', aux: 'avoir', pp: 'couru', ppres: 'courant',
+                pres: ['cours', 'cours', 'court', 'courons', 'courez', 'courent'],
+                imp: ['courais', 'courais', 'courait', 'courions', 'couriez', 'couraient'],
+                fut: ['courrai', 'courras', 'courra', 'courrons', 'courrez', 'courront'],
+                cond: ['courrais', 'courrais', 'courrait', 'courrions', 'courriez', 'courraient'],
+                subj: ['coure', 'coures', 'coure', 'courions', 'couriez', 'courent']
+            },
+            'mourir': {
+                group: '3e groupe', aux: 'être', pp: 'mort', ppres: 'mourant',
+                pres: ['meurs', 'meurs', 'meurt', 'mourons', 'mourez', 'meurent'],
+                imp: ['mourais', 'mourais', 'mourait', 'mourions', 'mouriez', 'mouraient'],
+                fut: ['mourrai', 'mourras', 'mourra', 'mourrons', 'mourrez', 'mourront'],
+                cond: ['mourrais', 'mourrais', 'mourrait', 'mourrions', 'mourriez', 'mourraient'],
+                subj: ['meure', 'meures', 'meure', 'mourions', 'mouriez', 'meurent']
+            },
+            'naître': {
+                group: '3e groupe', aux: 'être', pp: 'né', ppres: 'naissant',
+                pres: ['nais', 'nais', 'naît', 'naissons', 'naissez', 'naissent'],
+                imp: ['naissais', 'naissais', 'naissait', 'naissions', 'naissiez', 'naissaient'],
+                fut: ['naîtrai', 'naîtras', 'naîtra', 'naîtrons', 'naîtrez', 'naîtront'],
+                cond: ['naîtrais', 'naîtrais', 'naîtrait', 'naîtrions', 'naîtriez', 'naîtraient'],
+                subj: ['naisse', 'naisses', 'naisse', 'naissions', 'naissiez', 'naissent']
+            }
+        };
+
+        function startsWithVowelOrMuteH(word) {
+            return /^[aeiouyàâäéèêëîïôöùûüÿœæh]/i.test(word);
+        }
+
+        function conjugateFrenchVerb(rawInfinitive) {
+            let clean = rawInfinitive.trim().toLowerCase();
+            let isReflexive = false;
+            if (clean.startsWith('se ')) {
+                isReflexive = true;
+                clean = clean.slice(3).trim();
+            } else if (clean.startsWith("s'") || clean.startsWith("s’")) {
+                isReflexive = true;
+                clean = clean.slice(2).trim();
+            }
+
+            let data = null;
+
+            if (FR_IRREGULAR[clean]) {
+                data = FR_IRREGULAR[clean];
+            } else if (clean.endsWith('venir') || clean.endsWith('tenir')) {
+                const pref = clean.slice(0, -5);
+                const isVenir = clean.endsWith('venir');
+                const v = isVenir ? 'v' : 't';
+                data = {
+                    group: '3e groupe',
+                    aux: isVenir && FR_ETRE_VERBS.has(clean) ? 'être' : 'avoir',
+                    pp: pref + v + 'enu',
+                    ppres: pref + v + 'enant',
+                    pres: [pref + v + 'iens', pref + v + 'iens', pref + v + 'ient', pref + v + 'enons', pref + v + 'enez', pref + v + 'iennent'],
+                    imp: [pref + v + 'enais', pref + v + 'enais', pref + v + 'enait', pref + v + 'enions', pref + v + 'eniez', pref + v + 'enaient'],
+                    fut: [pref + v + 'iendrai', pref + v + 'iendras', pref + v + 'iendra', pref + v + 'iendrons', pref + v + 'iendrez', pref + v + 'iendront'],
+                    cond: [pref + v + 'iendrais', pref + v + 'iendrais', pref + v + 'iendrait', pref + v + 'iendrions', pref + v + 'iendriez', pref + v + 'iendraient'],
+                    subj: [pref + v + 'ienne', pref + v + 'iennes', pref + v + 'ienne', pref + v + 'enions', pref + v + 'eniez', pref + v + 'iennent']
+                };
+            } else if (clean.endsWith('prendre')) {
+                const pref = clean.slice(0, -7);
+                data = {
+                    group: '3e groupe', aux: 'avoir', pp: pref + 'pris', ppres: pref + 'prenant',
+                    pres: [pref + 'prends', pref + 'prends', pref + 'prend', pref + 'prenons', pref + 'prenez', pref + 'prennent'],
+                    imp: [pref + 'prenais', pref + 'prenais', pref + 'prenait', pref + 'prenions', pref + 'preniez', pref + 'prenaient'],
+                    fut: [pref + 'prendrai', pref + 'prendras', pref + 'prendra', pref + 'prendrons', pref + 'prendrez', pref + 'prendront'],
+                    cond: [pref + 'prendrais', pref + 'prendrais', pref + 'prendrait', pref + 'prendrions', pref + 'prendriez', pref + 'prendraient'],
+                    subj: [pref + 'prenne', pref + 'prennes', pref + 'prenne', pref + 'prenions', pref + 'preniez', pref + 'prennent']
+                };
+            } else if (clean.endsWith('mettre')) {
+                const pref = clean.slice(0, -6);
+                data = {
+                    group: '3e groupe', aux: 'avoir', pp: pref + 'mis', ppres: pref + 'mettant',
+                    pres: [pref + 'mets', pref + 'mets', pref + 'met', pref + 'mettons', pref + 'mettez', pref + 'mettent'],
+                    imp: [pref + 'mettais', pref + 'mettais', pref + 'mettait', pref + 'mettions', pref + 'mettiez', pref + 'mettaient'],
+                    fut: [pref + 'mettrai', pref + 'mettras', pref + 'mettra', pref + 'mettrons', pref + 'mettrez', pref + 'mettront'],
+                    cond: [pref + 'mettrais', pref + 'mettrais', pref + 'mettrait', pref + 'mettrions', pref + 'mettriez', pref + 'mettraient'],
+                    subj: [pref + 'mette', pref + 'mettes', pref + 'mette', pref + 'mettions', pref + 'mettiez', pref + 'mettent']
+                };
+            } else if (clean.endsWith('ouvrir') || clean.endsWith('offrir') || clean.endsWith('couvrir') || clean.endsWith('souffrir')) {
+                const stem = clean.slice(0, -2);
+                const ppStem = clean.slice(0, -3) + 'ert';
+                data = {
+                    group: '3e groupe', aux: 'avoir', pp: ppStem, ppres: stem + 'ant',
+                    pres: [stem + 'e', stem + 'es', stem + 'e', stem + 'ons', stem + 'ez', stem + 'ent'],
+                    imp: [stem + 'ais', stem + 'ais', stem + 'ait', stem + 'ions', stem + 'iez', stem + 'aient'],
+                    fut: [clean + 'ai', clean + 'as', clean + 'a', clean + 'ons', clean + 'ez', clean + 'ont'],
+                    cond: [clean + 'ais', clean + 'ais', clean + 'ait', clean + 'ions', clean + 'iez', clean + 'aient'],
+                    subj: [stem + 'e', stem + 'es', stem + 'e', stem + 'ions', stem + 'iez', stem + 'ent']
+                };
+            } else if (clean.endsWith('partir') || clean.endsWith('sortir') || clean.endsWith('sentir') || clean.endsWith('dormir') || clean.endsWith('servir') || clean.endsWith('mentir')) {
+                const longStem = clean.slice(0, -2);
+                const shortStem = clean.slice(0, -3);
+                data = {
+                    group: '3e groupe',
+                    aux: FR_ETRE_VERBS.has(clean) ? 'être' : 'avoir',
+                    pp: longStem + 'i',
+                    ppres: longStem + 'ant',
+                    pres: [shortStem + 's', shortStem + 's', shortStem + 't', longStem + 'ons', longStem + 'ez', longStem + 'ent'],
+                    imp: [longStem + 'ais', longStem + 'ais', longStem + 'ait', longStem + 'ions', longStem + 'iez', longStem + 'aient'],
+                    fut: [clean + 'ai', clean + 'as', clean + 'a', clean + 'ons', clean + 'ez', clean + 'ont'],
+                    cond: [clean + 'ais', clean + 'ais', clean + 'ait', clean + 'ions', clean + 'iez', clean + 'aient'],
+                    subj: [longStem + 'e', longStem + 'es', longStem + 'e', longStem + 'ions', longStem + 'iez', longStem + 'ent']
+                };
+            } else if (clean.endsWith('uire')) {
+                const stem = clean.slice(0, -2);
+                data = {
+                    group: '3e groupe', aux: 'avoir', pp: stem + 't', ppres: stem + 'sant',
+                    pres: [stem + 's', stem + 's', stem + 't', stem + 'sons', stem + 'sez', stem + 'sent'],
+                    imp: [stem + 'sais', stem + 'sais', stem + 'sait', stem + 'sions', stem + 'siez', stem + 'saient'],
+                    fut: [clean.slice(0, -1) + 'ai', clean.slice(0, -1) + 'as', clean.slice(0, -1) + 'a', clean.slice(0, -1) + 'ons', clean.slice(0, -1) + 'ez', clean.slice(0, -1) + 'ont'],
+                    cond: [clean.slice(0, -1) + 'ais', clean.slice(0, -1) + 'ais', clean.slice(0, -1) + 'ait', clean.slice(0, -1) + 'ions', clean.slice(0, -1) + 'iez', clean.slice(0, -1) + 'aient'],
+                    subj: [stem + 'se', stem + 'ses', stem + 'se', stem + 'sions', stem + 'siez', stem + 'sent']
+                };
+            } else if (clean.endsWith('aître')) {
+                const stem = clean.slice(0, -5);
+                data = {
+                    group: '3e groupe', aux: 'avoir', pp: stem + 'u', ppres: stem + 'aissant',
+                    pres: [stem + 'ais', stem + 'ais', stem + 'aît', stem + 'aissons', stem + 'aissez', stem + 'aissent'],
+                    imp: [stem + 'aissais', stem + 'aissais', stem + 'aissait', stem + 'aissions', stem + 'aissiez', stem + 'aissaient'],
+                    fut: [stem + 'aîtrai', stem + 'aîtras', stem + 'aîtra', stem + 'aîtrons', stem + 'aîtrez', stem + 'aîtront'],
+                    cond: [stem + 'aîtrais', stem + 'aîtrais', stem + 'aîtrait', stem + 'aîtrions', stem + 'aîtriez', stem + 'aîtraient'],
+                    subj: [stem + 'aisse', stem + 'aisses', stem + 'aisse', stem + 'aissions', stem + 'aissiez', stem + 'aissent']
+                };
+            } else if (clean.endsWith('cevoir')) {
+                const stem = clean.slice(0, -6);
+                data = {
+                    group: '3e groupe', aux: 'avoir', pp: stem + 'çu', ppres: stem + 'cevant',
+                    pres: [stem + 'çois', stem + 'çois', stem + 'çoit', stem + 'cevons', stem + 'cevez', stem + 'çoivent'],
+                    imp: [stem + 'cevais', stem + 'cevais', stem + 'cevait', stem + 'cevions', stem + 'ceviez', stem + 'cevaient'],
+                    fut: [stem + 'cevrai', stem + 'cevras', stem + 'cevra', stem + 'cevrons', stem + 'cevrez', stem + 'cevront'],
+                    cond: [stem + 'cevrais', stem + 'cevrais', stem + 'cevrait', stem + 'cevrions', stem + 'cevriez', stem + 'cevraient'],
+                    subj: [stem + 'çoive', stem + 'çoives', stem + 'çoive', stem + 'cevions', stem + 'ceviez', stem + 'çoivent']
+                };
+            } else if (clean.endsWith('er')) {
+                const stem = clean.slice(0, -2);
+                const isGer = clean.endsWith('ger');
+                const isCer = clean.endsWith('cer');
+                const nousStem = isGer ? stem + 'e' : (isCer ? stem.slice(0, -1) + 'ç' : stem);
+                const impStem = isGer ? stem + 'e' : (isCer ? stem.slice(0, -1) + 'ç' : stem);
+
+                // Handle e_er / é_er mute-e stem changes (e.g. lever -> lève, espérer -> espère)
+                let strongStem = stem;
+                if (clean === 'appeler' || clean === 'jeter') {
+                    strongStem = stem + stem.slice(-1);
+                } else {
+                    strongStem = stem.replace(/([eé])([^aeiouyàâäéèêëîïôöùûü]+)$/i, (_, v, cons) => 'è' + cons);
+                }
+
+                data = {
+                    group: '1er groupe (-er)',
+                    aux: FR_ETRE_VERBS.has(clean) ? 'être' : 'avoir',
+                    pp: stem + 'é',
+                    ppres: nousStem + 'ant',
+                    pres: [strongStem + 'e', strongStem + 'es', strongStem + 'e', nousStem + 'ons', stem + 'ez', strongStem + 'ent'],
+                    imp: [impStem + 'ais', impStem + 'ais', impStem + 'ait', stem + 'ions', stem + 'iez', impStem + 'aient'],
+                    fut: [strongStem + 'erai', strongStem + 'eras', strongStem + 'era', strongStem + 'erons', strongStem + 'erez', strongStem + 'eront'],
+                    cond: [strongStem + 'erais', strongStem + 'erais', strongStem + 'erait', strongStem + 'erions', strongStem + 'eriez', strongStem + 'eraient'],
+                    subj: [strongStem + 'e', strongStem + 'es', strongStem + 'e', stem + 'ions', stem + 'iez', strongStem + 'ent']
+                };
+            } else if (clean.endsWith('ir')) {
+                const stem = clean.slice(0, -2);
+                data = {
+                    group: '2e groupe (-ir)',
+                    aux: FR_ETRE_VERBS.has(clean) ? 'être' : 'avoir',
+                    pp: stem + 'i',
+                    ppres: stem + 'issant',
+                    pres: [stem + 'is', stem + 'is', stem + 'it', stem + 'issons', stem + 'issez', stem + 'issent'],
+                    imp: [stem + 'issais', stem + 'issais', stem + 'issait', stem + 'issions', stem + 'issiez', stem + 'issaient'],
+                    fut: [clean + 'ai', clean + 'as', clean + 'a', clean + 'ons', clean + 'ez', clean + 'ont'],
+                    cond: [clean + 'ais', clean + 'ais', clean + 'ait', clean + 'ions', clean + 'iez', clean + 'aient'],
+                    subj: [stem + 'isse', stem + 'isses', stem + 'isse', stem + 'issions', stem + 'issiez', stem + 'issent']
+                };
+            } else if (clean.endsWith('re')) {
+                const stem = clean.slice(0, -2);
+                const futStem = clean.slice(0, -1);
+                data = {
+                    group: '3e groupe (-re)',
+                    aux: FR_ETRE_VERBS.has(clean) ? 'être' : 'avoir',
+                    pp: stem + 'u',
+                    ppres: stem + 'ant',
+                    pres: [stem + 's', stem + 's', stem.endsWith('d') || stem.endsWith('t') ? stem : stem + 't', stem + 'ons', stem + 'ez', stem + 'ent'],
+                    imp: [stem + 'ais', stem + 'ais', stem + 'ait', stem + 'ions', stem + 'iez', stem + 'aient'],
+                    fut: [futStem + 'ai', futStem + 'as', futStem + 'a', futStem + 'ons', futStem + 'ez', futStem + 'ont'],
+                    cond: [futStem + 'ais', futStem + 'ais', futStem + 'ait', futStem + 'ions', futStem + 'iez', futStem + 'aient'],
+                    subj: [stem + 'e', stem + 'es', stem + 'e', stem + 'ions', stem + 'iez', stem + 'ent']
+                };
+            } else {
+                return null;
+            }
+
+            const effectiveAux = isReflexive ? 'être' : data.aux;
+            const subjects = ['je', 'tu', 'il / elle', 'nous', 'vous', 'ils / elles'];
+            const refPronouns = ['me', 'te', 'se', 'nous', 'vous', 'se'];
+
+            function formatLine(idx, form, useSubjPrefix = false) {
+                const subj = subjects[idx];
+                if (isReflexive) {
+                    const rp = refPronouns[idx];
+                    const elide = (idx === 0 || idx === 1 || idx === 2 || idx === 5) && startsWithVowelOrMuteH(form);
+                    const refStr = elide ? rp[0] + "'" + form : rp + ' ' + form;
+                    return `${useSubjPrefix ? 'que ' : ''}${subj} ${refStr}`;
+                }
+                if (idx === 0 && startsWithVowelOrMuteH(form)) {
+                    return `${useSubjPrefix ? "que j'" : "j'"}${form}`;
+                }
+                return `${useSubjPrefix ? 'que ' : ''}${subj} ${form}`;
+            }
+
+            const avoirPres = ['ai', 'as', 'a', 'avons', 'avez', 'ont'];
+            const etrePres = ['suis', 'es', 'est', 'sommes', 'êtes', 'sont'];
+            const passeCompose = subjects.map((_, idx) => {
+                const auxForm = effectiveAux === 'être' ? etrePres[idx] : avoirPres[idx];
+                const ppAgree = effectiveAux === 'être' && (idx === 3 || idx === 4 || idx === 5) && !data.pp.endsWith('s')
+                    ? data.pp + 's'
+                    : data.pp;
+                return formatLine(idx, `${auxForm} ${ppAgree}`, false);
+            });
+
+            return {
+                meta: [
+                    { label: 'Infinitif', value: rawInfinitive },
+                    { label: 'Groupe', value: isReflexive ? `${data.group} · Pronominal` : data.group },
+                    { label: 'Auxiliaire', value: effectiveAux },
+                    { label: 'Participe présent', value: isReflexive ? (startsWithVowelOrMuteH(data.ppres) ? `s'${data.ppres}` : `se ${data.ppres}`) : data.ppres },
+                    { label: 'Participe passé', value: data.pp }
+                ],
+                tenses: [
+                    { title: 'Présent', rows: data.pres.map((f, i) => formatLine(i, f)) },
+                    { title: 'Passé composé', rows: passeCompose },
+                    { title: 'Imparfait', rows: data.imp.map((f, i) => formatLine(i, f)) },
+                    { title: 'Futur simple', rows: data.fut.map((f, i) => formatLine(i, f)) },
+                    { title: 'Conditionnel présent', rows: data.cond.map((f, i) => formatLine(i, f)) },
+                    { title: 'Subjonctif présent', rows: data.subj.map((f, i) => formatLine(i, f, true)) }
+                ]
+            };
+        }
+
+        const EN_IRREGULAR = {
+            'be': ['was / were', 'been', 'being'], 'have': ['had', 'had', 'having'], 'do': ['did', 'done', 'doing'],
+            'go': ['went', 'gone', 'going'], 'say': ['said', 'said', 'saying'], 'get': ['got', 'gotten / got', 'getting'],
+            'make': ['made', 'made', 'making'], 'know': ['knew', 'known', 'knowing'], 'think': ['thought', 'thought', 'thinking'],
+            'take': ['took', 'taken', 'taking'], 'see': ['saw', 'seen', 'seeing'], 'come': ['came', 'come', 'coming'],
+            'find': ['found', 'found', 'finding'], 'give': ['gave', 'given', 'giving'], 'tell': ['told', 'told', 'telling'],
+            'feel': ['felt', 'felt', 'feeling'], 'become': ['became', 'become', 'becoming'], 'leave': ['left', 'left', 'leaving'],
+            'put': ['put', 'put', 'putting'], 'mean': ['meant', 'meant', 'meaning'], 'keep': ['kept', 'kept', 'keeping'],
+            'let': ['let', 'let', 'letting'], 'begin': ['began', 'begun', 'beginning'], 'hear': ['heard', 'heard', 'hearing'],
+            'run': ['ran', 'run', 'running'], 'bring': ['brought', 'brought', 'bringing'], 'write': ['wrote', 'written', 'writing'],
+            'sit': ['sat', 'sat', 'sitting'], 'stand': ['stood', 'stood', 'standing'], 'lose': ['lost', 'lost', 'losing'],
+            'pay': ['paid', 'paid', 'paying'], 'meet': ['met', 'met', 'meeting'], 'set': ['set', 'set', 'setting'],
+            'learn': ['learned / learnt', 'learned / learnt', 'learning'], 'lead': ['led', 'led', 'leading'],
+            'understand': ['understood', 'understood', 'understanding'], 'speak': ['spoke', 'spoken', 'speaking'],
+            'read': ['read', 'read', 'reading'], 'spend': ['spent', 'spent', 'spending'], 'grow': ['grew', 'grown', 'growing'],
+            'win': ['won', 'won', 'winning'], 'teach': ['taught', 'taught', 'teaching'], 'buy': ['bought', 'bought', 'buying'],
+            'send': ['sent', 'sent', 'sending'], 'build': ['built', 'built', 'building'], 'fall': ['fell', 'fallen', 'falling'],
+            'cut': ['cut', 'cut', 'cutting'], 'sell': ['sold', 'sold', 'selling'], 'break': ['broke', 'broken', 'breaking'],
+            'hit': ['hit', 'hit', 'hitting'], 'eat': ['ate', 'eaten', 'eating'], 'catch': ['caught', 'caught', 'catching'],
+            'draw': ['drew', 'drawn', 'drawing'], 'choose': ['chose', 'chosen', 'choosing'], 'sleep': ['slept', 'slept', 'sleeping'],
+            'sing': ['sang', 'sung', 'singing'], 'swim': ['swam', 'swum', 'swimming'], 'fly': ['flew', 'flown', 'flying'],
+            'drive': ['drove', 'driven', 'driving'], 'ride': ['rode', 'ridden', 'riding'], 'forget': ['forgot', 'forgotten', 'forget'],
+            'forgive': ['forgave', 'forgiven', 'forgiving'], 'freeze': ['froze', 'frozen', 'freezing'], 'hide': ['hid', 'hidden', 'hiding'],
+            'rise': ['rose', 'risen', 'rising'], 'shake': ['shook', 'shaken', 'shaking'], 'steal': ['stole', 'stolen', 'stealing'],
+            'throw': ['threw', 'thrown', 'throwing'], 'wake': ['woke', 'woken', 'waking'], 'wear': ['wore', 'worn', 'wearing']
+        };
+
+        function conjugateEnglishVerb(rawBase) {
+            const base = rawBase.trim().toLowerCase().replace(/^to\s+/, '');
+            if (!base || /\s/.test(base)) return null;
+
+            let third = base + 's';
+            if (base === 'be') third = 'is';
+            else if (base === 'have') third = 'has';
+            else if (base === 'do') third = 'does';
+            else if (base === 'go') third = 'goes';
+            else if (/[^aeiou]y$/.test(base)) third = base.slice(0, -1) + 'ies';
+            else if (/(s|sh|ch|x|z|o)$/.test(base)) third = base + 'es';
+
+            let past, pp, ing;
+            if (EN_IRREGULAR[base]) {
+                [past, pp, ing] = EN_IRREGULAR[base];
+            } else {
+                if (base.endsWith('e') && !base.endsWith('ee')) {
+                    past = base + 'd';
+                    ing = base.slice(0, -1) + 'ing';
+                } else if (/[^aeiou]y$/.test(base)) {
+                    past = base.slice(0, -1) + 'ied';
+                    ing = base + 'ing';
+                } else if (/^[^aeiou]*[aeiou][^aeiouwxy]$/.test(base) && base.length >= 3) {
+                    const last = base.slice(-1);
+                    past = base + last + 'ed';
+                    ing = base + last + 'ing';
+                } else {
+                    past = base + 'ed';
+                    ing = base + 'ing';
+                }
+                pp = past;
+            }
+
+            const presRows = base === 'be'
+                ? ['I am', 'you are', 'he / she / it is', 'we are', 'they are']
+                : [`I ${base}`, `you ${base}`, `he / she / it ${third}`, `we ${base}`, `they ${base}`];
+
+            const pastRows = base === 'be'
+                ? ['I was', 'you were', 'he / she / it was', 'we were', 'they were']
+                : [`I ${past}`, `you ${past}`, `he / she / it ${past}`, `we ${past}`, `they ${past}`];
+
+            return {
+                meta: [
+                    { label: 'Base Form', value: base },
+                    { label: '3rd Person Singular', value: third },
+                    { label: 'Simple Past', value: past },
+                    { label: 'Past Participle', value: pp },
+                    { label: 'Present Participle', value: ing }
+                ],
+                tenses: [
+                    { title: 'Simple Present', rows: presRows },
+                    { title: 'Simple Past', rows: pastRows },
+                    { title: 'Future Simple', rows: [`I will ${base}`, `you will ${base}`, `he / she will ${base}`, `we will ${base}`, `they will ${base}`] },
+                    { title: 'Present Continuous', rows: [`I am ${ing}`, `you are ${ing}`, `he / she is ${ing}`, `we are ${ing}`, `they are ${ing}`] },
+                    { title: 'Present Perfect', rows: [`I have ${pp}`, `you have ${pp}`, `he / she has ${pp}`, `we have ${pp}`, `they have ${pp}`] },
+                    { title: 'Conditional', rows: [`I would ${base}`, `you would ${base}`, `he / she would ${base}`, `we would ${base}`, `they would ${base}`] }
+                ]
+            };
+        }
+
+        function conjugateRomanceOrGerman(word, lang) {
+            const w = word.trim().toLowerCase();
+            if (lang === 'es' && /(ar|er|ir)$/.test(w)) {
+                const stem = w.slice(0, -2);
+                const type = w.slice(-2);
+                const presEnd = type === 'ar' ? ['o', 'as', 'a', 'amos', 'áis', 'an'] : (type === 'er' ? ['o', 'es', 'e', 'emos', 'éis', 'en'] : ['o', 'es', 'e', 'imos', 'ís', 'en']);
+                const pretEnd = type === 'ar' ? ['é', 'aste', 'ó', 'amos', 'asteis', 'aron'] : ['í', 'iste', 'ió', 'imos', 'isteis', 'ieron'];
+                const futEnd = ['é', 'ás', 'á', 'emos', 'éis', 'án'];
+                const subj = ['yo', 'tú', 'él / ella', 'nosotros', 'vosotros', 'ellos'];
+                return {
+                    meta: [{ label: 'Infinitivo', value: w }, { label: 'Conjugación', value: `-${type}` }],
+                    tenses: [
+                        { title: 'Presente', rows: subj.map((s, i) => `${s} ${stem}${presEnd[i]}`) },
+                        { title: 'Pretérito perfecto simple', rows: subj.map((s, i) => `${s} ${stem}${pretEnd[i]}`) },
+                        { title: 'Futuro simple', rows: subj.map((s, i) => `${s} ${w}${futEnd[i]}`) }
+                    ]
+                };
+            }
+            if (lang === 'it' && /(are|ere|ire)$/.test(w)) {
+                const stem = w.slice(0, -3);
+                const type = w.slice(-3);
+                const presEnd = type === 'are' ? ['o', 'i', 'a', 'iamo', 'ate', 'ano'] : (type === 'ere' ? ['o', 'i', 'e', 'iamo', 'ete', 'ono'] : ['o', 'i', 'e', 'iamo', 'ite', 'ono']);
+                const futStem = type === 'are' ? stem + 'er' : stem + type[0] + 'r';
+                const futEnd = ['ò', 'ai', 'à', 'emo', 'ete', 'anno'];
+                const subj = ['io', 'tu', 'lui / lei', 'noi', 'voi', 'loro'];
+                return {
+                    meta: [{ label: 'Infinito', value: w }, { label: 'Coniugazione', value: `-${type}` }],
+                    tenses: [
+                        { title: 'Presente', rows: subj.map((s, i) => `${s} ${stem}${presEnd[i]}`) },
+                        { title: 'Futuro semplice', rows: subj.map((s, i) => `${s} ${futStem}${futEnd[i]}`) }
+                    ]
+                };
+            }
+            if (lang === 'pt-BR' && /(ar|er|ir)$/.test(w)) {
+                const stem = w.slice(0, -2);
+                const type = w.slice(-2);
+                const presEnd = type === 'ar' ? ['o', 'as', 'a', 'amos', 'ais', 'am'] : (type === 'er' ? ['o', 'es', 'e', 'emos', 'eis', 'em'] : ['o', 'es', 'e', 'imos', 'is', 'em']);
+                const futEnd = ['ei', 'ás', 'á', 'emos', 'eis', 'ão'];
+                const subj = ['eu', 'tu', 'ele / ela', 'nós', 'vós', 'eles'];
+                return {
+                    meta: [{ label: 'Infinitivo', value: w }, { label: 'Conjugação', value: `-${type}` }],
+                    tenses: [
+                        { title: 'Presente', rows: subj.map((s, i) => `${s} ${stem}${presEnd[i]}`) },
+                        { title: 'Futuro do presente', rows: subj.map((s, i) => `${s} ${w}${futEnd[i]}`) }
+                    ]
+                };
+            }
+            if (lang === 'de' && /en$/.test(w) && w.length > 3) {
+                const stem = w.slice(0, -2);
+                const eInsert = /[dt]$/.test(stem) ? 'e' : '';
+                const subj = ['ich', 'du', 'er / sie / es', 'wir', 'ihr', 'sie / Sie'];
+                const presEnd = ['e', `${eInsert}st`, `${eInsert}t`, 'en', `${eInsert}t`, 'en'];
+                const pratEnd = [`${eInsert}te`, `${eInsert}test`, `${eInsert}te`, `${eInsert}ten`, `${eInsert}tet`, `${eInsert}ten`];
+                return {
+                    meta: [{ label: 'Infinitiv', value: w }, { label: 'Partizip II', value: `ge${stem}${eInsert}t` }],
+                    tenses: [
+                        { title: 'Präsens', rows: subj.map((s, i) => `${s} ${stem}${presEnd[i]}`) },
+                        { title: 'Präteritum', rows: subj.map((s, i) => `${s} ${stem}${pratEnd[i]}`) },
+                        { title: 'Futur I', rows: ['ich werde ' + w, 'du wirst ' + w, 'er / sie wird ' + w, 'wir werden ' + w, 'ihr werdet ' + w, 'sie werden ' + w] }
+                    ]
+                };
+            }
+            return null;
+        }
+
+        function buildVerbConjugation(word, lang) {
+            if (lang === 'fr') return conjugateFrenchVerb(word);
+            if (lang === 'en') return conjugateEnglishVerb(word);
+            return conjugateRomanceOrGerman(word, lang);
+        }
+
+        async function conjugateWithLmStudio() {
+            if (!currentEntryData) return;
+            const cfg = LANGUAGES[currentEntryData.lang] || LANGUAGES['fr'];
+            const btn = document.getElementById('ai-conj-btn');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>${escapeHtml(cfg.ui.enriching)}</span>`;
+            }
+
+            const prompt = `Conjugate the verb "${currentEntryData.word}" in ${cfg.name}. Return strict JSON only:
+{"meta":[{"label":"Infinitive","value":"${currentEntryData.word}"}],"tenses":[{"title":"Tense Name","rows":["pronoun form1","pronoun form2","pronoun form3","pronoun form4","pronoun form5","pronoun form6"]}]}`;
+
+            const payload = {
+                model: 'local-model',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.1,
+                max_tokens: 700
+            };
+
+            try {
+                let res = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.status === 404) {
+                    res = await fetch('http://localhost:1234/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+                if (!res.ok) throw new Error('LM Studio offline');
+                const data = await res.json();
+                const raw = data.choices[0].message.content;
+                const match = raw.match(/\{[\s\S]*\}/);
+                if (!match) throw new Error('Invalid JSON');
+                const parsed = JSON.parse(match[0]);
+                if (Array.isArray(parsed.tenses) && parsed.tenses.length) {
+                    currentEntryData.conjugation = {
+                        meta: Array.isArray(parsed.meta) ? parsed.meta : [],
+                        tenses: parsed.tenses
+                    };
+                    renderUsitoArticle(currentEntryData);
+                }
+            } catch (_) {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>${escapeHtml(cfg.ui.conjAiBtn)}</span>`;
+                }
+            }
+        }
+
+        async function fetchWiktionaryRest(wikiLang, targetLangKey, word) {
+            try {
+                const res = await fetch(`https://${wikiLang}.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(word)}`);
+                if (!res.ok) return null;
+                const data = await res.json();
+
+                const buckets = data[targetLangKey] || data[wikiLang] || data['other'] || Object.values(data)[0];
+                if (!Array.isArray(buckets) || !buckets.length) return null;
+
+                const meanings = buckets.map(b => ({
+                    partOfSpeech: b.partOfSpeech || 'term',
+                    definitions: (b.definitions || []).map(d => ({
+                        definition: stripHtml(d.definition),
+                        example: Array.isArray(d.examples) && d.examples.length ? stripHtml(d.examples[0]) : '',
+                        synonyms: [],
+                        antonyms: []
+                    })).filter(d => d.definition),
+                    synonyms: [],
+                    antonyms: []
+                })).filter(m => m.definitions.length > 0);
+
+                return meanings.length ? meanings : null;
+            } catch (_) {
+                return null;
+            }
+        }
+
+        async function fetchWiktionarySynAnt(wikiLang, word) {
+            const synonyms = new Set();
+            const antonyms = new Set();
+            try {
+                const url = `https://${wikiLang}.wiktionary.org/w/api.php?action=parse&page=${encodeURIComponent(word)}&prop=text&format=json&origin=*`;
+                const res = await fetch(url);
+                if (!res.ok) return { synonyms: [], antonyms: [] };
+                const json = await res.json();
+                const html = json?.parse?.text?.['*'];
+                if (!html) return { synonyms: [], antonyms: [] };
+
+                const doc = new DOMParser().parseFromString(html, 'text/html');
+                const headings = doc.querySelectorAll('h2, h3, h4, h5');
+                headings.forEach(h => {
+                    const label = h.textContent.toLowerCase();
+                    const isSyn = /synonyme|synonym|sinónimo|sinonimo|sinônimo|синоним|同義語|同义词|유의어/.test(label);
+                    const isAnt = /antonyme|antonym|antónimo|antonimo|antônimo|антоним|対義語|反义词|반의어/.test(label);
+                    if (!isSyn && !isAnt) return;
+
+                    let el = h.parentElement?.classList?.contains('mw-heading') ? h.parentElement.nextElementSibling : h.nextElementSibling;
+                    let steps = 0;
+                    while (el && steps < 4) {
+                        if (/^H[2-5]$/.test(el.tagName) || el.classList?.contains('mw-heading')) break;
+                        el.querySelectorAll('li a, dd a').forEach(a => {
+                            const txt = a.textContent.trim();
+                            if (txt && txt.length < 40 && !txt.includes(':') && !/^\d+$/.test(txt)) {
+                                if (isSyn) synonyms.add(txt);
+                                if (isAnt) antonyms.add(txt);
+                            }
+                        });
+                        if ((isSyn && synonyms.size > 0) || (isAnt && antonyms.size > 0)) break;
+                        el = el.nextElementSibling;
+                        steps++;
+                    }
+                });
+            } catch (_) {}
+            return { synonyms: [...synonyms].slice(0, 24), antonyms: [...antonyms].slice(0, 24) };
+        }
+
+        async function fetchDatamuseLexicon(lang, word) {
+            const synonyms = [];
+            const antonyms = [];
+            const related = [];
+            try {
+                if (lang === 'en') {
+                    const [synRes, antRes, relRes] = await Promise.all([
+                        fetch(`https://api.datamuse.com/words?rel_syn=${encodeURIComponent(word)}&max=20`),
+                        fetch(`https://api.datamuse.com/words?rel_ant=${encodeURIComponent(word)}&max=20`),
+                        fetch(`https://api.datamuse.com/words?ml=${encodeURIComponent(word)}&max=16`)
+                    ]);
+                    if (synRes.ok) (await synRes.json()).forEach(x => synonyms.push(x.word));
+                    if (antRes.ok) (await antRes.json()).forEach(x => antonyms.push(x.word));
+                    if (relRes.ok) (await relRes.json()).forEach(x => related.push(x.word));
+                } else if (lang === 'es') {
+                    const relRes = await fetch(`https://api.datamuse.com/words?v=es&ml=${encodeURIComponent(word)}&max=18`);
+                    if (relRes.ok) (await relRes.json()).forEach(x => related.push(x.word));
+                }
+            } catch (_) {}
+            return { synonyms, antonyms, related };
+        }
+
+        function setUsitoTab(tabName) {
+            activeTab = tabName;
+            if (currentEntryData) renderUsitoArticle(currentEntryData);
+        }
+
+        async function enrichWithLmStudio() {
+            if (!currentEntryData) return;
+            const cfg = LANGUAGES[currentEntryData.lang] || LANGUAGES['fr'];
+            const ui = cfg.ui;
+            const btn = document.getElementById('ai-enrich-btn');
+            const box = document.getElementById('ai-usito-box');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> <span>${escapeHtml(ui.enriching)}</span>`;
+            }
+
+            const prompt = `You are an expert lexicographer like Usito dictionary. Write all explanations strictly in ${cfg.name}. For the word "${currentEntryData.word}" (language: ${cfg.name}), return strict JSON only:
+{"synonyms":["..."],"antonyms":["..."],"related":["..."],"usage_note":"Short grammar/usage note in ${cfg.name} (1-2 sentences)","etymology":"Brief word origin in ${cfg.name}"}`;
+
+            const payload = {
+                model: 'local-model',
+                messages: [{ role: 'user', content: prompt }],
+                temperature: 0.2,
+                max_tokens: 500
+            };
+
+            try {
+                let res = await fetch('/api/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.status === 404) {
+                    res = await fetch('http://localhost:1234/v1/chat/completions', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                }
+                if (!res.ok) throw new Error('LM Studio offline');
+                const data = await res.json();
+                const raw = data.choices[0].message.content;
+                const match = raw.match(/\{[\s\S]*\}/);
+                if (!match) throw new Error('Invalid JSON');
+                const parsed = JSON.parse(match[0]);
+
+                if (Array.isArray(parsed.synonyms)) {
+                    currentEntryData.synonyms = [...new Set([...currentEntryData.synonyms, ...parsed.synonyms])];
+                }
+                if (Array.isArray(parsed.antonyms)) {
+                    currentEntryData.antonyms = [...new Set([...currentEntryData.antonyms, ...parsed.antonyms])];
+                }
+                if (Array.isArray(parsed.related)) {
+                    currentEntryData.related = [...new Set([...currentEntryData.related, ...parsed.related])];
+                }
+                if (parsed.usage_note) currentEntryData.usageNote = parsed.usage_note;
+                if (parsed.etymology && !currentEntryData.origin) currentEntryData.origin = parsed.etymology;
+
+                renderUsitoArticle(currentEntryData);
+            } catch (_) {
+                if (box) {
+                    box.innerHTML = `<span class="text-rose-300 text-xs">${escapeHtml(ui.aiOffline)}</span>`;
+                }
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles"></i> <span>${escapeHtml(ui.enrichBtn)}</span>`;
+                }
+            }
+        }
+
+        async function searchWord() {
+            const rawWord = document.getElementById('word-input').value.trim();
+            const lang = document.getElementById('lang-select').value;
+            const cfg = getCurrentCfg();
+            const ui = cfg.ui;
+            const resultsArea = document.getElementById('results-area');
+            hideSuggestions();
+
+            if (!rawWord) {
+                renderEmptyState();
+                return;
+            }
+            activeTab = 'all';
+
+            resultsArea.innerHTML = `
+                <div class="glass-panel rounded-3xl p-10 text-center space-y-3">
+                    <i class="fa-solid fa-circle-notch fa-spin text-2xl text-violet-400"></i>
+                    <p class="text-sm text-slate-300 font-medium">${escapeHtml(ui.loading)} « ${escapeHtml(rawWord)} » (${escapeHtml(cfg.name)})...</p>
+                </div>
+            `;
+
+            const queryWord = lang === 'de' ? rawWord : rawWord.toLowerCase();
+            let meanings = [];
+            let phoneticText = '';
+            let originText = '';
+            let headword = rawWord;
+            let sourcesUsed = [];
+            currentAudioUrl = null;
+
+            const synSet = new Set();
+            const antSet = new Set();
+            const relSet = new Set();
+
+            const dictTask = cfg.dictApi
+                ? fetch(`https://api.dictionaryapi.dev/api/v2/entries/${cfg.dictApi}/${encodeURIComponent(queryWord)}`)
+                    .then(r => r.ok ? r.json() : null)
+                    .catch(() => null)
+                : Promise.resolve(null);
+
+            const wikiSynAntTask = fetchWiktionarySynAnt(cfg.wiki, rawWord);
+            const datamuseTask = fetchDatamuseLexicon(lang, queryWord);
+
+            const [dictEntries, wikiSynAnt, dmLex] = await Promise.all([dictTask, wikiSynAntTask, datamuseTask]);
+
+            if (Array.isArray(dictEntries) && dictEntries.length) {
+                sourcesUsed.push('Free Dictionary API');
+                headword = dictEntries[0].word || rawWord;
+                for (const entry of dictEntries) {
+                    if (!originText && entry.origin) originText = entry.origin;
+                    for (const p of (entry.phonetics || [])) {
+                        if (!phoneticText && p.text) phoneticText = p.text;
+                        if (!currentAudioUrl && p.audio) {
+                            currentAudioUrl = p.audio.startsWith('//') ? 'https:' + p.audio : p.audio;
+                        }
+                    }
+                    for (const m of (entry.meanings || [])) {
+                        (m.synonyms || []).forEach(s => synSet.add(s));
+                        (m.antonyms || []).forEach(a => antSet.add(a));
+                        (m.definitions || []).forEach(d => {
+                            (d.synonyms || []).forEach(s => synSet.add(s));
+                            (d.antonyms || []).forEach(a => antSet.add(a));
+                        });
+                        meanings.push(m);
+                    }
+                }
+            }
+
+            if (!meanings.length) {
+                let wikiMeanings = await fetchWiktionaryRest(cfg.wiki, cfg.wiki, rawWord);
+                if (!wikiMeanings && cfg.wiki !== 'en') {
+                    wikiMeanings = await fetchWiktionaryRest('en', cfg.wiki, rawWord);
+                }
+                if (wikiMeanings) {
+                    meanings = wikiMeanings;
+                    sourcesUsed.push(`Wiktionary (${cfg.wiki.toUpperCase()})`);
+                }
+            }
+
+            // Fallback for French pronominal verbs like "se lever" -> lookup base "lever" if needed
+            if (!meanings.length && lang === 'fr' && /^(se |s'|s’)/i.test(rawWord)) {
+                const baseVerb = rawWord.replace(/^(se |s'|s’)/i, '').trim();
+                const baseMeanings = await fetchWiktionaryRest('fr', 'fr', baseVerb);
+                if (baseMeanings) {
+                    meanings = baseMeanings;
+                    sourcesUsed.push('Wiktionary (FR)');
+                }
+            }
+
+            wikiSynAnt.synonyms.forEach(s => synSet.add(s));
+            wikiSynAnt.antonyms.forEach(a => antSet.add(a));
+            if (wikiSynAnt.synonyms.length || wikiSynAnt.antonyms.length) {
+                sourcesUsed.push('Wiktionary Syn/Ant');
+            }
+
+            dmLex.synonyms.forEach(s => synSet.add(s));
+            dmLex.antonyms.forEach(a => antSet.add(a));
+            dmLex.related.forEach(r => {
+                if (r.toLowerCase() !== headword.toLowerCase() && !synSet.has(r)) relSet.add(r);
+            });
+            if (dmLex.synonyms.length || dmLex.antonyms.length || dmLex.related.length) {
+                sourcesUsed.push('Datamuse');
+            }
+
+            const cleanFilter = w => w && w.toLowerCase() !== headword.toLowerCase();
+            const synonyms = [...synSet].filter(cleanFilter);
+            const antonyms = [...antSet].filter(cleanFilter);
+            const related = [...relSet].filter(cleanFilter);
+
+            const tempEntry = { word: headword, lang, meanings };
+            const isVerb = isVerbEntry(tempEntry);
+            const conjugation = isVerb ? buildVerbConjugation(headword, lang) : null;
+
+            if (!meanings.length && !synonyms.length && !antonyms.length && !conjugation) {
+                resultsArea.innerHTML = `
+                    <div class="glass-panel rounded-3xl p-8 text-center space-y-3 border border-rose-500/30 bg-rose-500/5">
+                        <i class="fa-solid fa-circle-exclamation text-2xl text-rose-400"></i>
+                        <h3 class="text-base font-bold text-white">${escapeHtml(ui.notFound)} « ${escapeHtml(rawWord)} » (${escapeHtml(cfg.name)})</h3>
+                        <p class="text-xs text-slate-400">${escapeHtml(ui.notFoundHint)}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            await saveRecentWord(headword, lang);
+
+            currentEntryData = {
+                word: headword,
+                lang,
+                langName: cfg.name,
+                phonetic: phoneticText,
+                origin: originText,
+                usageNote: '',
+                meanings,
+                synonyms,
+                antonyms,
+                related,
+                isVerb,
+                conjugation,
+                sources: [...new Set(sourcesUsed)]
+            };
+
+            renderUsitoArticle(currentEntryData);
+        }
+
+        function renderUsitoArticle(entry) {
+            const resultsArea = document.getElementById('results-area');
+            const cfg = LANGUAGES[entry.lang] || LANGUAGES['fr'];
+            const ui = cfg.ui;
+            const posList = [...new Set(entry.meanings.map(m => m.partOfSpeech).filter(Boolean))];
+
+            const allExamples = [];
+            entry.meanings.forEach(m => {
+                (m.definitions || []).forEach(d => {
+                    if (d.example) allExamples.push({ pos: m.partOfSpeech, text: d.example });
+                });
+            });
+
+            const synCount = entry.synonyms.length;
+            const antCount = entry.antonyms.length;
+            const showVerbSection = entry.isVerb || Boolean(entry.conjugation);
+
+            const showDefs = activeTab === 'all' || activeTab === 'defs';
+            const showSynAnt = activeTab === 'all' || activeTab === 'synant';
+            const showConj = showVerbSection && (activeTab === 'all' || activeTab === 'conj');
+            const showExamples = activeTab === 'all' || activeTab === 'examples';
+            const showEtymo = activeTab === 'all' || activeTab === 'etymo';
+
+            const defsSectionHtml = entry.meanings.map(meaning => {
+                const defsHtml = (meaning.definitions || []).slice(0, 6).map((d, idx) => {
+                    const inlineSyns = (d.synonyms || []).slice(0, 5);
+                    return `
+                        <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
+                            <div class="flex items-start gap-3">
+                                <span class="px-2 py-0.5 rounded-md bg-violet-500/20 border border-violet-500/35 font-mono text-xs font-bold text-violet-300 mt-0.5">
+                                    ${idx + 1}
+                                </span>
+                                <div class="flex-1 space-y-1.5">
+                                    <p class="text-sm sm:text-[15px] text-slate-100 leading-relaxed">${escapeHtml(d.definition)}</p>
+                                    ${d.example ? `
+                                        <div class="pl-3 border-l-2 border-cyan-400/50 text-xs text-slate-300 italic">
+                                            « ${escapeHtml(d.example)} »
+                                        </div>
+                                    ` : ''}
+                                    ${inlineSyns.length ? `
+                                        <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                                            <span class="text-[11px] font-bold text-emerald-300/90">${escapeHtml(ui.synBadge)} :</span>
+                                            ${inlineSyns.map(s => `
+                                                <button onclick="quickLookup('${escapeHtml(s)}')"
+                                                    class="text-[11px] px-2 py-0.5 rounded-md bg-emerald-500/10 hover:bg-emerald-500/25 text-emerald-200 border border-emerald-500/25 transition-all">
+                                                    ${escapeHtml(s)}
+                                                </button>
+                                            `).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                return `
+                    <div class="space-y-3">
+                        <div class="flex items-center gap-3">
+                            <span class="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-bold uppercase tracking-wider">
+                                ${escapeHtml(meaning.partOfSpeech)}
+                            </span>
+                            <div class="h-px flex-1 bg-white/10"></div>
+                        </div>
+                        <div class="space-y-2.5">${defsHtml}</div>
+                    </div>
+                `;
+            }).join('');
+
+            const conjugationHtml = showConj ? `
+                <section class="glass-panel rounded-3xl p-6 space-y-5 border-amber-500/25">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-table-cells text-amber-400"></i>
+                            <span>${escapeHtml(ui.conjHeading)} « ${escapeHtml(entry.word)} »</span>
+                        </h3>
+                        <button id="ai-conj-btn" onclick="conjugateWithLmStudio()"
+                            class="px-3.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/35 border border-amber-500/40 text-amber-200 text-xs font-bold transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            <span>${escapeHtml(ui.conjAiBtn)}</span>
+                        </button>
+                    </div>
+
+                    ${entry.conjugation ? `
+                        ${entry.conjugation.meta && entry.conjugation.meta.length ? `
+                            <div class="flex flex-wrap gap-2">
+                                ${entry.conjugation.meta.map(m => `
+                                    <div class="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs">
+                                        <span class="text-amber-300/80 font-semibold">${escapeHtml(m.label)} :</span>
+                                        <span class="text-white font-bold ml-1">${escapeHtml(m.value)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            ${entry.conjugation.tenses.map(tense => `
+                                <div class="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2.5">
+                                    <div class="text-xs font-extrabold uppercase tracking-wider text-amber-300 border-b border-white/10 pb-1.5">
+                                        ${escapeHtml(tense.title)}
+                                    </div>
+                                    <ul class="space-y-1 text-xs sm:text-[13px] text-slate-200 font-medium">
+                                        ${(tense.rows || []).map(row => `
+                                            <li class="px-2 py-1 rounded-lg hover:bg-white/5 transition-colors">${escapeHtml(row)}</li>
+                                        `).join('')}
+                                    </ul>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <p class="text-xs text-slate-400">
+                            Click « ${escapeHtml(ui.conjAiBtn)} » to generate full tense tables for this verb in ${escapeHtml(entry.langName)}.
+                        </p>
+                    `}
+                </section>
+            ` : '';
+
+            resultsArea.innerHTML = `
+                <!-- 1. HEADWORD BANNER -->
+                <div class="glass-panel rounded-3xl p-6 sm:p-7 space-y-4">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div class="space-y-2">
+                            <div class="flex items-center gap-3 flex-wrap">
+                                <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">${escapeHtml(entry.word)}</h2>
+                                ${entry.phonetic ? `
+                                    <span class="font-mono text-sm px-3 py-1 rounded-xl bg-violet-500/15 border border-violet-500/30 text-violet-200">
+                                        ${escapeHtml(entry.phonetic)}
+                                    </span>
+                                ` : ''}
+                                <span class="px-2.5 py-1 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-200 text-xs font-bold">
+                                    ${escapeHtml(entry.langName)}
+                                </span>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-slate-300">
+                                ${posList.map(pos => `
+                                    <span class="px-2.5 py-0.5 rounded-lg bg-white/10 border border-white/15 font-semibold text-indigo-200">
+                                        ${escapeHtml(pos)}
+                                    </span>
+                                `).join('')}
+                                <span class="text-slate-400 font-mono text-[11px]">
+                                    ${escapeHtml(ui.sources)} ${escapeHtml(entry.sources.join(' · ') || 'Wiktionary')}
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <button onclick="playPronunciation()"
+                                class="px-4 py-2.5 rounded-2xl bg-cyan-500/20 hover:bg-cyan-500/35 border border-cyan-500/40 text-cyan-200 text-xs font-bold transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-volume-high"></i>
+                                <span>${escapeHtml(ui.pronounce)}</span>
+                            </button>
+                            <button id="ai-enrich-btn" onclick="enrichWithLmStudio()"
+                                class="px-4 py-2.5 rounded-2xl bg-violet-500/20 hover:bg-violet-500/35 border border-violet-500/40 text-violet-200 text-xs font-bold transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                                <span>${escapeHtml(ui.enrichBtn)}</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    ${entry.usageNote ? `
+                        <div class="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-100 flex items-start gap-2.5">
+                            <i class="fa-solid fa-circle-info text-amber-300 mt-0.5"></i>
+                            <div><strong>${escapeHtml(ui.usageNote)}</strong> ${escapeHtml(entry.usageNote)}</div>
+                        </div>
+                    ` : `<div id="ai-usito-box"></div>`}
+
+                    <!-- SECTION TABS -->
+                    <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-white/10">
+                        <button onclick="setUsitoTab('all')"
+                            class="usito-tab ${activeTab === 'all' ? 'active' : ''} px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                            ${escapeHtml(ui.tabAll)}
+                        </button>
+                        <button onclick="setUsitoTab('defs')"
+                            class="usito-tab ${activeTab === 'defs' ? 'active' : ''} px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                            ${escapeHtml(ui.tabDefs)} (${entry.meanings.reduce((acc, m) => acc + (m.definitions?.length || 0), 0)})
+                        </button>
+                        <button onclick="setUsitoTab('synant')"
+                            class="usito-tab ${activeTab === 'synant' ? 'active' : ''} px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                            <span>${escapeHtml(ui.tabSynAnt)}</span>
+                            <span class="px-1.5 py-0.2 rounded-full bg-emerald-500/25 text-emerald-200 text-[10px]">${synCount}/${antCount}</span>
+                        </button>
+                        ${showVerbSection ? `
+                            <button onclick="setUsitoTab('conj')"
+                                class="usito-tab ${activeTab === 'conj' ? 'active' : ''} px-3.5 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/35 text-xs font-bold text-amber-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-table-cells text-[11px]"></i>
+                                <span>${escapeHtml(ui.tabConj)}</span>
+                            </button>
+                        ` : ''}
+                        <button onclick="setUsitoTab('examples')"
+                            class="usito-tab ${activeTab === 'examples' ? 'active' : ''} px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                            ${escapeHtml(ui.tabExamples)} (${allExamples.length})
+                        </button>
+                        <button onclick="setUsitoTab('etymo')"
+                            class="usito-tab ${activeTab === 'etymo' ? 'active' : ''} px-3.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-slate-300">
+                            ${escapeHtml(ui.tabEtymo)}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 2. CONJUGATED VERB SECTION (SHOWN AUTOMATICALLY WHEN WORD IS A VERB) -->
+                ${conjugationHtml}
+
+                <!-- 3. SYN. & ANT. + LEXICAL FIELD -->
+                ${showSynAnt ? `
+                    <section class="glass-panel rounded-3xl p-6 space-y-5">
+                        <div class="flex items-center justify-between gap-2">
+                            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                                <i class="fa-solid fa-arrows-left-right text-emerald-400"></i>
+                                <span>${escapeHtml(ui.synAntHeading)}</span>
+                            </h3>
+                            <span class="text-[11px] font-mono text-slate-400">${escapeHtml(ui.clickWordHint)}</span>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <!-- SYNONYMS -->
+                            <div class="p-4 rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/25 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-extrabold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
+                                        <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40">${escapeHtml(ui.synBadge)}</span>
+                                        <span>${escapeHtml(ui.synTitle)}</span>
+                                    </span>
+                                    <span class="font-mono text-xs text-emerald-300/80">${synCount}</span>
+                                </div>
+                                ${synCount ? `
+                                    <div class="flex flex-wrap gap-2">
+                                        ${entry.synonyms.map(s => `
+                                            <button onclick="quickLookup('${escapeHtml(s)}')"
+                                                class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-100 text-xs font-semibold transition-all">
+                                                ${escapeHtml(s)}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <p class="text-xs text-slate-400">${escapeHtml(ui.noSyn)}</p>
+                                `}
+                            </div>
+
+                            <!-- ANTONYMS -->
+                            <div class="p-4 rounded-2xl bg-rose-500/[0.06] border border-rose-500/25 space-y-3">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-extrabold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
+                                        <span class="px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/40">${escapeHtml(ui.antBadge)}</span>
+                                        <span>${escapeHtml(ui.antTitle)}</span>
+                                    </span>
+                                    <span class="font-mono text-xs text-rose-300/80">${antCount}</span>
+                                </div>
+                                ${antCount ? `
+                                    <div class="flex flex-wrap gap-2">
+                                        ${entry.antonyms.map(a => `
+                                            <button onclick="quickLookup('${escapeHtml(a)}')"
+                                                class="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/35 text-rose-100 text-xs font-semibold transition-all">
+                                                ${escapeHtml(a)}
+                                            </button>
+                                        `).join('')}
+                                    </div>
+                                ` : `
+                                    <p class="text-xs text-slate-400">${escapeHtml(ui.noAnt)}</p>
+                                `}
+                            </div>
+                        </div>
+
+                        ${entry.related.length ? `
+                            <div class="p-4 rounded-2xl bg-cyan-500/[0.05] border border-cyan-500/20 space-y-2.5">
+                                <div class="text-xs font-extrabold uppercase tracking-wider text-cyan-300">
+                                    ${escapeHtml(ui.relatedTitle)}
+                                </div>
+                                <div class="flex flex-wrap gap-2">
+                                    ${entry.related.map(r => `
+                                        <button onclick="quickLookup('${escapeHtml(r)}')"
+                                            class="px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/25 border border-cyan-500/25 text-cyan-200 text-xs transition-all">
+                                            ${escapeHtml(r)}
+                                        </button>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        ` : ''}
+                    </section>
+                ` : ''}
+
+                <!-- 4. DEFINITIONS -->
+                ${showDefs && entry.meanings.length ? `
+                    <section class="glass-panel rounded-3xl p-6 space-y-5">
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol text-violet-400"></i>
+                            <span>${escapeHtml(ui.defsHeading)}</span>
+                        </h3>
+                        <div class="space-y-6">${defsSectionHtml}</div>
+                    </section>
+                ` : ''}
+
+                <!-- 5. EXAMPLES -->
+                ${showExamples ? `
+                    <section class="glass-panel rounded-3xl p-6 space-y-4">
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-quote-left text-cyan-400"></i>
+                            <span>${escapeHtml(ui.examplesHeading)}</span>
+                        </h3>
+                        ${allExamples.length ? `
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                ${allExamples.map(ex => `
+                                    <div class="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 space-y-1">
+                                        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300">${escapeHtml(ex.pos)}</span>
+                                        <p class="text-xs sm:text-sm text-slate-200 italic leading-relaxed">« ${escapeHtml(ex.text)} »</p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : `
+                            <p class="text-xs text-slate-400">${escapeHtml(ui.noExamples)}</p>
+                        `}
+                    </section>
+                ` : ''}
+
+                <!-- 6. ETYMOLOGY -->
+                ${showEtymo ? `
+                    <section class="glass-panel rounded-3xl p-6 space-y-3">
+                        <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-landmark text-amber-400"></i>
+                            <span>${escapeHtml(ui.etymoHeading)}</span>
+                        </h3>
+                        <p class="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                            ${entry.origin ? escapeHtml(entry.origin) : escapeHtml(ui.noEtymo)}
+                        </p>
+                    </section>
+                ` : ''}
+            `;
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyLanguageUI();
+            renderEmptyState();
+            verifyAuth();
+        });
+    </script>
+</body>
+
+</html>

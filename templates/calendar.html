@@ -1,0 +1,1915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeNest — Family Calendar</title>
+
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #e9eef5;
+            --glass-bg: rgba(255, 255, 255, 0.72);
+            --glass-card: rgba(255, 255, 255, 0.56);
+            --glass-hover: rgba(255, 255, 255, 0.84);
+            --glass-border: rgba(15, 23, 42, 0.10);
+            --glass-specular: rgba(255, 255, 255, 0.92);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-subtle: #64748b;
+            --accent: #0284c7;
+            --accent-soft: rgba(2, 132, 199, 0.14);
+            --orb-1: rgba(56, 189, 248, 0.34);
+            --orb-2: rgba(99, 102, 241, 0.28);
+            --orb-3: rgba(20, 184, 166, 0.24);
+        }
+
+        html.dark {
+            color-scheme: dark;
+            --bg-base: #070b14;
+            --glass-bg: rgba(15, 23, 42, 0.68);
+            --glass-card: rgba(30, 41, 59, 0.48);
+            --glass-hover: rgba(30, 41, 59, 0.74);
+            --glass-border: rgba(255, 255, 255, 0.10);
+            --glass-specular: rgba(255, 255, 255, 0.16);
+            --text-main: #f1f5f9;
+            --text-muted: #cbd5e1;
+            --text-subtle: #94a3b8;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.18);
+            --orb-1: rgba(14, 165, 233, 0.20);
+            --orb-2: rgba(99, 102, 241, 0.20);
+            --orb-3: rgba(16, 185, 129, 0.15);
+        }
+
+        * {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            box-sizing: border-box;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 9999px;
+            filter: blur(110px);
+            pointer-events: none;
+            z-index: 0;
+        }
+        .orb-1 { width: 520px; height: 520px; top: -140px; left: -120px; background: var(--orb-1); }
+        .orb-2 { width: 560px; height: 560px; bottom: -160px; right: -120px; background: var(--orb-2); }
+        .orb-3 { width: 380px; height: 380px; top: 42%; left: 44%; background: var(--orb-3); }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(165%);
+            -webkit-backdrop-filter: blur(24px) saturate(165%);
+            border: 1px solid var(--glass-border);
+            box-shadow:
+                inset 0 1px 0 0 var(--glass-specular),
+                0 20px 50px rgba(2, 6, 23, 0.16);
+        }
+
+        .glass-subcard {
+            background: var(--glass-card);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 1px 0 0 var(--glass-specular);
+            transition: all 0.16s ease;
+        }
+        .glass-subcard:hover {
+            background: var(--glass-hover);
+        }
+
+        .glass-input {
+            background: var(--glass-card);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+        html.dark .glass-input option {
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        .day-cell {
+            min-height: 118px;
+            background: var(--glass-card);
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 1px 0 0 var(--glass-specular);
+            transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+        }
+        .day-cell:hover {
+            background: var(--glass-hover);
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+        .day-cell.outside-month { opacity: 0.36; }
+        .day-cell.weekend-cell { background: rgba(148, 163, 184, 0.06); }
+        .day-cell.selected-day {
+            border: 1.5px solid var(--accent);
+            box-shadow:
+                inset 0 1px 0 0 var(--glass-specular),
+                0 0 0 3px var(--accent-soft);
+        }
+        .day-cell.today-cell .day-number {
+            background: var(--accent);
+            color: #ffffff;
+            font-weight: 800;
+            box-shadow: 0 4px 12px var(--accent-soft);
+        }
+        html.dark .day-cell.today-cell .day-number { color: #070b14; }
+
+        .cat-family      { background: rgba(14, 165, 233, 0.16); color: #0284c7; border: 1px solid rgba(14, 165, 233, 0.34); }
+        .cat-school      { background: rgba(168, 85, 247, 0.16); color: #7e22ce; border: 1px solid rgba(168, 85, 247, 0.34); }
+        .cat-activity    { background: rgba(16, 185, 129, 0.16); color: #047857; border: 1px solid rgba(16, 185, 129, 0.34); }
+        .cat-reminder    { background: rgba(245, 158, 11, 0.18); color: #b45309; border: 1px solid rgba(245, 158, 11, 0.36); }
+        .cat-holiday     { background: rgba(244, 63, 94, 0.14); color: #be123c; border: 1px solid rgba(244, 63, 94, 0.30); }
+        .cat-religious   { background: rgba(20, 184, 166, 0.16); color: #0f766e; border: 1px solid rgba(20, 184, 166, 0.34); }
+
+        html.dark .cat-family    { background: rgba(56, 189, 248, 0.18); color: #7dd3fc; border-color: rgba(56, 189, 248, 0.35); }
+        html.dark .cat-school    { background: rgba(192, 132, 252, 0.18); color: #d8b4fe; border-color: rgba(192, 132, 252, 0.35); }
+        html.dark .cat-activity  { background: rgba(52, 211, 153, 0.18); color: #6ee7b7; border-color: rgba(52, 211, 153, 0.35); }
+        html.dark .cat-reminder  { background: rgba(251, 191, 36, 0.18); color: #fcd34d; border-color: rgba(251, 191, 36, 0.35); }
+        html.dark .cat-holiday   { background: rgba(251, 113, 133, 0.16); color: #fda4af; border-color: rgba(251, 113, 133, 0.32); }
+        html.dark .cat-religious { background: rgba(45, 212, 191, 0.16); color: #5eead4; border-color: rgba(45, 212, 191, 0.32); }
+
+        .dot-family    { background: #0ea5e9; }
+        .dot-school    { background: #a855f7; }
+        .dot-activity  { background: #10b981; }
+        .dot-reminder  { background: #f59e0b; }
+        .dot-holiday   { background: #f43f5e; }
+        .dot-religious { background: #14b8a6; }
+
+        .icon-sun { display: none; }
+        html.dark .icon-sun { display: block; }
+        html.dark .icon-moon { display: none; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.35); border-radius: 999px; }
+
+        @media (max-width: 640px) {
+            .day-cell { min-height: 76px; }
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-5 lg:p-6 min-h-screen flex flex-col">
+
+    <div class="ambient-orb orb-1"></div>
+    <div class="ambient-orb orb-2"></div>
+    <div class="ambient-orb orb-3"></div>
+
+    <div class="relative z-10 w-full max-w-[1600px] mx-auto flex-1 flex flex-col gap-4">
+
+        <!-- TOP BAR -->
+        <header class="glass-panel rounded-3xl px-4 py-3.5 sm:px-6 sm:py-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3.5">
+            <div class="flex items-center justify-between sm:justify-start gap-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-sky-500/15 border border-sky-500/30 text-sky-500 flex-shrink-0">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="3"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                            <circle cx="8" cy="14" r="1" fill="currentColor"></circle>
+                            <circle cx="12" cy="14" r="1" fill="currentColor"></circle>
+                            <circle cx="16" cy="14" r="1" fill="currentColor"></circle>
+                            <circle cx="8" cy="18" r="1" fill="currentColor"></circle>
+                            <circle cx="12" cy="18" r="1" fill="currentColor"></circle>
+                        </svg>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">HomeNest Calendar</h1>
+                            <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500 border border-sky-500/30 font-semibold">Family Sync</span>
+                        </div>
+                        <p id="header-today-label" class="text-xs text-[var(--text-subtle)] mt-0.5">Loading date...</p>
+                    </div>
+                </div>
+
+                <!-- Live Next Event Pill -->
+                <div class="hidden md:flex items-center gap-2.5 px-3.5 py-2 rounded-2xl glass-subcard text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span class="text-[var(--text-subtle)] font-semibold">Next up:</span>
+                    <span id="next-event-text" class="font-bold truncate max-w-[210px]">No upcoming events</span>
+                </div>
+            </div>
+
+            <!-- Controls & Navigation -->
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- Search Events -->
+                <div class="relative">
+                    <svg class="w-3.5 h-3.5 text-[var(--text-subtle)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input id="event-search-input" type="text" oninput="renderAll()" placeholder="Search events..." class="glass-input rounded-2xl pl-8 pr-3 py-2 text-xs w-40 sm:w-48">
+                </div>
+
+                <!-- Category Filter Pills -->
+                <div class="flex items-center gap-1 p-1 rounded-2xl glass-subcard text-xs overflow-x-auto">
+                    <button onclick="setCategoryFilter('all')" data-cat-filter="all" class="cat-filter-btn px-2.5 py-1 rounded-xl font-semibold bg-sky-500 text-white transition-all">All</button>
+                    <button onclick="setCategoryFilter('family')" data-cat-filter="family" class="cat-filter-btn px-2.5 py-1 rounded-xl font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">Family</button>
+                    <button onclick="setCategoryFilter('school')" data-cat-filter="school" class="cat-filter-btn px-2.5 py-1 rounded-xl font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">School</button>
+                    <button onclick="setCategoryFilter('activity')" data-cat-filter="activity" class="cat-filter-btn px-2.5 py-1 rounded-xl font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">Activity</button>
+                    <button onclick="setCategoryFilter('reminder')" data-cat-filter="reminder" class="cat-filter-btn px-2.5 py-1 rounded-xl font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">Reminder</button>
+                </div>
+
+                <!-- Visibility Dropdown -->
+                <select id="visibility-filter" onchange="renderAll()" class="glass-input rounded-2xl px-3 py-2 text-xs font-semibold cursor-pointer">
+                    <option value="all">All Visible</option>
+                    <option value="shared">Shared Family</option>
+                    <option value="custom">Custom Shared</option>
+                    <option value="private">Private Only</option>
+                </select>
+
+                <!-- AI Safety Alert Shield Button -->
+                <button onclick="openSafetyModal()" id="safety-status-btn" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 transition-all" title="AI Safety Alert Guard">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    <span id="safety-status-label">AI Safety: ON</span>
+                </button>
+
+                <!-- Religious & Cultural Celebrations Button -->
+                <button onclick="openCalendarsModal()" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-teal-500/40 text-teal-500 hover:bg-teal-500/10 transition-all" title="Religious Calendars & Celebrations">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <span>Celebrations</span>
+                    <span id="active-calendars-count" class="text-[10px] font-mono px-1.5 rounded-full bg-teal-500/20">3</span>
+                </button>
+
+                <a href="/reminders" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 transition-all" title="Open Reminders">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 11 12 14 22 4"></polyline>
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                    </svg>
+                    <span>Reminders</span>
+                </a>
+
+                <!-- Hub Back Button -->
+                <a href="/" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-semibold flex items-center gap-1.5 hover:border-sky-500/50 transition-all" title="Return to HomeNest Hub">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                    </svg>
+                    <span>Hub</span>
+                </a>
+
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="glass-subcard w-9 h-9 rounded-2xl flex items-center justify-center hover:border-sky-500/50 transition-all" title="Toggle Theme">
+                    <svg class="w-4 h-4 icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg class="w-4 h-4 icon-sun text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+
+                <!-- User Chip -->
+                <div class="glass-subcard pl-2 pr-3 py-1.5 rounded-2xl flex items-center gap-2 text-xs">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-white font-bold text-[11px] flex items-center justify-center">
+                        <span id="user-initial">R</span>
+                    </div>
+                    <span id="user-display-name" class="font-semibold hidden sm:inline">Member</span>
+                    <button onclick="signOut()" class="text-[var(--text-subtle)] hover:text-rose-500 transition-colors ml-0.5" title="Sign Out">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- GLOBAL AI SAFETY BLOCK ALERT BANNER -->
+        <div id="safety-block-banner" class="hidden glass-panel rounded-3xl px-5 py-3.5 border-rose-500/50 bg-rose-500/15 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-2xl bg-rose-500/20 border border-rose-500/40 text-rose-500 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                </div>
+                <div>
+                    <div class="text-xs font-extrabold uppercase tracking-wider text-rose-500">AI Safety Alert — Event Blocked</div>
+                    <p id="safety-block-message" class="text-xs font-semibold mt-0.5">Inappropriate or unsafe content detected.</p>
+                </div>
+            </div>
+            <button onclick="document.getElementById('safety-block-banner').classList.add('hidden')" class="glass-subcard px-3 py-1.5 rounded-xl text-xs font-bold hover:border-rose-500/40">
+                Dismiss
+            </button>
+        </div>
+
+        <!-- AI SMART ADD BAR -->
+        <section class="glass-panel rounded-3xl px-4 py-3 sm:px-5 sm:py-3.5 space-y-2.5">
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                <div class="flex items-center gap-2 text-xs font-extrabold text-sky-500 uppercase tracking-wider flex-shrink-0">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                    </svg>
+                    <span>AI Smart Add</span>
+                </div>
+
+                <form onsubmit="handleAiQuickAdd(event)" class="flex-1 flex flex-col sm:flex-row gap-2">
+                    <input
+                        id="ai-quick-input"
+                        type="text"
+                        placeholder="Try: 'Friday soccer match at 18:00' or 'Guitar practice every Tuesday at 17:00'..."
+                        class="glass-input flex-1 rounded-2xl px-3.5 py-2 text-xs sm:text-sm"
+                    >
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <label class="glass-subcard px-3 py-2 rounded-2xl text-[11px] font-semibold flex items-center gap-1.5 cursor-pointer select-none">
+                            <input id="ai-autosave-toggle" type="checkbox" checked class="accent-sky-500 rounded">
+                            <span>Auto-Schedule</span>
+                        </label>
+
+                        <button type="submit" id="ai-parse-btn" class="px-4 py-2 rounded-2xl bg-sky-500 hover:bg-sky-600 text-white font-bold text-xs flex items-center gap-1.5 transition-all shadow-sm">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            <span>Smart Add</span>
+                        </button>
+
+                        <button type="button" onclick="openEventModal()" class="px-3.5 py-2 rounded-2xl glass-subcard border-sky-500/40 text-sky-500 font-bold text-xs flex items-center gap-1.5 hover:bg-sky-500/10 transition-all">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>New Event</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- AI Confirmation Toast Banner -->
+            <div id="ai-toast-banner" class="hidden glass-subcard rounded-2xl px-3.5 py-2.5 border-emerald-500/40 bg-emerald-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                <div class="flex items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 font-mono text-[10px] font-bold" id="ai-toast-source">LM Studio</span>
+                    <span id="ai-toast-message" class="font-semibold">Event scheduled!</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="ai-toast-edit-btn" type="button" class="text-sky-500 hover:underline font-bold">Edit</button>
+                    <button id="ai-toast-undo-btn" type="button" class="text-rose-500 hover:underline font-bold">Undo</button>
+                    <button onclick="document.getElementById('ai-toast-banner').classList.add('hidden')" class="text-[var(--text-subtle)] hover:text-[var(--text-main)] ml-1">Dismiss</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN WORKSPACE -->
+        <div class="flex-1 grid grid-cols-1 xl:grid-cols-[1.85fr_0.95fr] gap-4 items-stretch">
+
+            <!-- LEFT: CALENDAR PANEL -->
+            <section class="glass-panel rounded-3xl p-4 sm:p-6 flex flex-col justify-between">
+                <div>
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                        <div class="flex items-center gap-3">
+                            <h2 id="month-year-title" class="text-xl sm:text-2xl font-extrabold tracking-tight">November 2026</h2>
+                            <span id="month-event-count" class="text-[11px] font-mono px-2.5 py-0.5 rounded-full glass-subcard text-[var(--text-muted)]">0 events</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <div class="flex items-center gap-1 p-1 rounded-xl glass-subcard text-xs">
+                                <button onclick="setViewMode('month')" data-view-mode="month" class="view-mode-btn px-2.5 py-1 rounded-lg font-bold bg-sky-500 text-white transition-all">Month</button>
+                                <button onclick="setViewMode('week')" data-view-mode="week" class="view-mode-btn px-2.5 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">Week</button>
+                                <button onclick="setViewMode('list')" data-view-mode="list" class="view-mode-btn px-2.5 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all">Agenda</button>
+                            </div>
+
+                            <div class="flex items-center gap-1">
+                                <button onclick="navigatePeriod(-1)" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center hover:border-sky-500/50 transition-all" title="Previous">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="15 18 9 12 15 6"></polyline>
+                                    </svg>
+                                </button>
+                                <button onclick="jumpToToday()" class="glass-subcard px-3 h-8 rounded-xl text-xs font-bold hover:border-sky-500/50 transition-all">
+                                    Today
+                                </button>
+                                <button onclick="navigatePeriod(1)" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center hover:border-sky-500/50 transition-all" title="Next">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                                        <polyline points="9 18 15 12 9 6"></polyline>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MONTH VIEW -->
+                    <div id="month-view-container">
+                        <div class="grid grid-cols-7 gap-2 mb-2 text-center">
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-rose-500/80 py-1">Sun</div>
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)] py-1">Mon</div>
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)] py-1">Tue</div>
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)] py-1">Wed</div>
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)] py-1">Thu</div>
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)] py-1">Fri</div>
+                            <div class="text-[11px] font-bold uppercase tracking-wider text-rose-500/80 py-1">Sat</div>
+                        </div>
+                        <div id="calendar-grid" class="grid grid-cols-7 gap-2"></div>
+                    </div>
+
+                    <!-- WEEK VIEW -->
+                    <div id="week-view-container" class="hidden">
+                        <div id="week-grid" class="grid grid-cols-1 md:grid-cols-7 gap-2.5"></div>
+                    </div>
+
+                    <!-- AGENDA LIST VIEW -->
+                    <div id="list-view-container" class="hidden space-y-2.5 max-h-[620px] overflow-y-auto pr-1"></div>
+                </div>
+
+                <!-- Bottom Legend Bar -->
+                <div class="mt-4 pt-3 border-t border-[var(--glass-border)] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--text-subtle)]">
+                    <div class="flex flex-wrap items-center gap-3.5">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full dot-family"></span>Family</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full dot-school"></span>School</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full dot-activity"></span>Activity</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full dot-reminder"></span>Reminder</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full dot-holiday"></span>Holiday</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full dot-religious"></span>Religious / Cultural</span>
+                    </div>
+                    <span>Click any day to inspect · Double-click to add</span>
+                </div>
+            </section>
+
+            <!-- RIGHT: DAY INSPECTOR + UPCOMING PANEL -->
+            <aside class="flex flex-col gap-4">
+                <section class="glass-panel rounded-3xl p-5 flex-1 flex flex-col">
+                    <div class="flex items-start justify-between gap-3 pb-3.5 border-b border-[var(--glass-border)]">
+                        <div>
+                            <div class="text-[10px] font-extrabold uppercase tracking-widest text-sky-500">Selected Day</div>
+                            <h3 id="selected-day-title" class="text-lg font-extrabold mt-0.5">Sunday, Nov 22, 2026</h3>
+                            <p id="selected-day-relative" class="text-xs text-[var(--text-subtle)] mt-0.5">Today</p>
+                        </div>
+                        <button onclick="openEventModal(null, selectedDateStr)" class="px-3.5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            <span>Add Event</span>
+                        </button>
+                    </div>
+
+                    <div id="day-events-list" class="mt-4 space-y-2.5 flex-1 overflow-y-auto pr-1 min-h-[200px]"></div>
+                </section>
+
+                <section class="glass-panel rounded-3xl p-5">
+                    <div class="flex items-center justify-between pb-3 border-b border-[var(--glass-border)]">
+                        <div class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)]">Upcoming Schedule</div>
+                        <span class="text-[10px] font-mono text-[var(--text-subtle)]">Next 30 Days</span>
+                    </div>
+                    <div id="upcoming-events-list" class="mt-3 space-y-2 max-h-[260px] overflow-y-auto pr-1"></div>
+                </section>
+            </aside>
+        </div>
+    </div>
+
+    <!-- ADD / EDIT EVENT MODAL -->
+    <div id="event-modal" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-md hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeEventModal()">
+        <div class="glass-panel w-full max-w-xl rounded-3xl p-6 space-y-4 max-h-[92vh] overflow-y-auto">
+            <div class="flex items-center justify-between pb-3 border-b border-[var(--glass-border)]">
+                <div>
+                    <div class="text-[10px] font-extrabold uppercase tracking-widest text-sky-500">Schedule Entry</div>
+                    <h2 id="modal-title" class="text-lg font-extrabold">New Calendar Event</h2>
+                </div>
+                <button onclick="closeEventModal()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Modal-Level AI Safety Alert Box -->
+            <div id="modal-safety-alert" class="hidden rounded-2xl p-3.5 bg-rose-500/15 border border-rose-500/40 text-xs space-y-1">
+                <div class="font-extrabold text-rose-500 uppercase tracking-wider">AI Safety Alert</div>
+                <p id="modal-safety-alert-text" class="text-[var(--text-main)] font-medium"></p>
+            </div>
+
+            <form id="event-form" onsubmit="saveEvent(event)" class="space-y-3.5">
+                <input type="hidden" id="ev-id" value="">
+
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Event Title</label>
+                    <input id="ev-title" type="text" required placeholder="e.g. Guitar Lesson, Math Test, Family Dinner" class="glass-input w-full rounded-xl px-3.5 py-2.5 text-sm">
+                </div>
+
+                <!-- Date + All Day Toggle -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+                    <div class="sm:col-span-2">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Date</label>
+                        <input id="ev-date" type="date" required class="glass-input w-full rounded-xl px-3 py-2 text-xs font-mono">
+                    </div>
+                    <label class="glass-subcard rounded-xl px-3 py-2 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer h-[34px]">
+                        <input id="ev-allday" type="checkbox" onchange="toggleAllDayInputs()" class="accent-sky-500 rounded">
+                        <span>All-Day Event</span>
+                    </label>
+                </div>
+
+                <!-- Start & End Time -->
+                <div id="ev-time-row" class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Start Time</label>
+                        <input id="ev-start" type="time" class="glass-input w-full rounded-xl px-3 py-2 text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">End Time</label>
+                        <input id="ev-end" type="time" class="glass-input w-full rounded-xl px-3 py-2 text-xs font-mono">
+                    </div>
+                </div>
+
+                <!-- Repeat Rule + Repeat Until -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Repeat</label>
+                        <select id="ev-repeat" onchange="toggleRepeatUntil()" class="glass-input w-full rounded-xl px-3 py-2.5 text-xs font-semibold">
+                            <option value="none">Does not repeat</option>
+                            <option value="daily">Every day (Daily)</option>
+                            <option value="weekly">Every week (Weekly)</option>
+                            <option value="biweekly">Every 2 weeks (Biweekly)</option>
+                            <option value="monthly">Every month (Monthly)</option>
+                            <option value="yearly">Every year (Yearly)</option>
+                        </select>
+                    </div>
+                    <div id="ev-repeat-until-wrap" class="opacity-50 pointer-events-none">
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Repeat Until (Optional)</label>
+                        <input id="ev-repeat-until" type="date" class="glass-input w-full rounded-xl px-3 py-2 text-xs font-mono">
+                    </div>
+                </div>
+
+                <!-- Category + Visibility -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Category</label>
+                        <select id="ev-category" class="glass-input w-full rounded-xl px-3 py-2.5 text-xs font-semibold">
+                            <option value="family">Family</option>
+                            <option value="school">School</option>
+                            <option value="activity">Activity</option>
+                            <option value="reminder">Reminder</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Visibility / Share</label>
+                        <select id="ev-visibility" onchange="toggleCustomSharePicker()" class="glass-input w-full rounded-xl px-3 py-2.5 text-xs font-semibold">
+                            <option value="shared">Shared (All Family Accounts)</option>
+                            <option value="custom">Custom Share (1 Person / Selected)</option>
+                            <option value="private">Private (Only Me)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Custom Share Family Member Picker -->
+                <div id="custom-share-box" class="hidden glass-subcard rounded-2xl p-3.5 space-y-2 border-indigo-500/35">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-400">Share With Specific Person(s)</span>
+                        <span class="text-[10px] text-[var(--text-subtle)]">Click to select 1 or more</span>
+                    </div>
+                    <div id="custom-share-members" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Location (Optional)</label>
+                    <input id="ev-location" type="text" placeholder="e.g. Candiac Library, Music Room, Home" class="glass-input w-full rounded-xl px-3.5 py-2 text-xs">
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">Notes (Optional)</label>
+                    <textarea id="ev-description" rows="2" placeholder="Add items to bring, instructions, or details..." class="glass-input w-full rounded-xl px-3.5 py-2 text-xs"></textarea>
+                </div>
+
+                <div class="pt-2 flex items-center justify-between gap-2">
+                    <button type="button" id="ev-delete-btn" onclick="deleteCurrentModalEvent()" class="hidden px-3.5 py-2 rounded-xl bg-rose-500/15 text-rose-500 border border-rose-500/30 hover:bg-rose-500 hover:text-white text-xs font-bold transition-all">
+                        Delete Event
+                    </button>
+                    <div class="flex items-center gap-2 ml-auto">
+                        <button type="button" onclick="closeEventModal()" class="glass-subcard px-4 py-2 rounded-xl text-xs font-semibold">
+                            Cancel
+                        </button>
+                        <button type="submit" class="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold shadow-sm transition-all">
+                            Save Event
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- AI SAFETY ALERT SETTINGS & LOG MODAL -->
+    <div id="safety-modal" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-md hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeSafetyModal()">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-[var(--glass-border)]">
+                <div>
+                    <div class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-500">HomeNest Protection</div>
+                    <h2 class="text-lg font-extrabold">AI Safety Alert</h2>
+                </div>
+                <button onclick="closeSafetyModal()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="glass-subcard rounded-2xl p-4 flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-sm font-bold">Calendar Content Moderation</div>
+                    <p class="text-xs text-[var(--text-subtle)] mt-0.5">
+                        Scans event titles, notes, and locations for bad words, bullying, or unsafe content using Python rules + LM Studio only when turned ON.
+                    </p>
+                </div>
+                <label class="inline-flex items-center cursor-pointer flex-shrink-0">
+                    <input type="checkbox" id="safety-toggle-checkbox" onchange="toggleAiSafetySetting(this.checked)" class="w-5 h-5 accent-emerald-500 rounded cursor-pointer">
+                </label>
+            </div>
+
+            <p id="safety-role-hint" class="text-[11px] text-[var(--text-subtle)]"></p>
+
+            <div id="safety-alerts-log-section" class="hidden space-y-2">
+                <div class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)]">Recent Blocked Calendar Alerts</div>
+                <div id="safety-alerts-log-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+            </div>
+
+            <div class="pt-1 flex justify-end">
+                <button onclick="closeSafetyModal()" class="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- RELIGIOUS & CULTURAL CELEBRATIONS MODAL -->
+    <div id="calendars-modal" class="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-md hidden flex items-center justify-center p-4" onclick="if (event.target === this) closeCalendarsModal()">
+        <div class="glass-panel w-full max-w-lg rounded-3xl p-6 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-[var(--glass-border)]">
+                <div>
+                    <div class="text-[10px] font-extrabold uppercase tracking-widest text-teal-500">Calendar Layers</div>
+                    <h2 class="text-lg font-extrabold">Religious Calendars &amp; Celebrations</h2>
+                </div>
+                <button onclick="closeCalendarsModal()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-[var(--text-main)]">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1" id="calendar-layers-list"></div>
+
+            <div class="pt-2 flex items-center justify-between">
+                <button type="button" onclick="toggleAllLayers(true)" class="text-xs font-bold text-sky-500 hover:underline">Enable All</button>
+                <button type="button" onclick="closeCalendarsModal()" class="px-5 py-2 rounded-xl bg-sky-500 hover:bg-sky-600 text-white text-xs font-bold">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = 'Member';
+        let currentRole = 'child';
+        let familyMembers = [];
+        let selectedShareUsers = new Set();
+        let aiSafetyEnabled = true;
+        let canToggleSafety = false;
+        let recentSafetyAlerts = [];
+
+        let rawEvents = [];
+        let categoryFilter = 'all';
+        let viewMode = 'month';
+
+        const CALENDAR_LAYERS = [
+            { id: 'ca_qc', name: 'Canada & Quebec Holidays', desc: 'Fête nationale, Canada Day, Thanksgiving, Labour Day, Boxing Day', badge: 'holiday' },
+            { id: 'islamic', name: 'Islamic Calendar (Hijri)', desc: 'Ramadan Begins, Laylat al-Qadr, Eid al-Fitr, Arafah, Eid al-Adha, Muharram, Ashura, Mawlid', badge: 'religious' },
+            { id: 'christian', name: 'Christian Celebrations', desc: 'Ash Wednesday, Palm Sunday, Good Friday, Easter Sunday, Pentecost, Advent, Christmas', badge: 'religious' },
+            { id: 'jewish', name: 'Jewish Calendar (Hebrew)', desc: 'Rosh Hashanah, Yom Kippur, Sukkot, Hanukkah, Purim, Passover (Pesach), Shavuot', badge: 'religious' },
+            { id: 'lunar', name: 'Lunar & East Asian Calendar', desc: 'Lunar New Year, Lantern Festival, Dragon Boat Festival, Qixi, Mid-Autumn Festival', badge: 'religious' },
+            { id: 'hindu_sikh', name: 'Hindu & Sikh Celebrations', desc: 'Maha Shivaratri, Holi, Vaisakhi, Raksha Bandhan, Janmashtami, Navratri, Diwali', badge: 'religious' },
+            { id: 'international', name: 'International & Seasonal Days', desc: "Valentine's Day, St. Patrick's Day, Earth Day, Mother's & Father's Day, Halloween, Solstices", badge: 'holiday' },
+        ];
+
+        let enabledLayers = loadEnabledLayers();
+
+        function loadEnabledLayers() {
+            try {
+                const saved = JSON.parse(localStorage.getItem('homenest_cal_layers') || 'null');
+                if (saved && typeof saved === 'object') return saved;
+            } catch (e) {}
+            return { ca_qc: true, islamic: true, christian: false, jewish: false, lunar: false, hindu_sikh: false, international: true };
+        }
+
+        function saveEnabledLayers() {
+            try { localStorage.setItem('homenest_cal_layers', JSON.stringify(enabledLayers)); } catch (e) {}
+            updateActiveLayersBadge();
+        }
+
+        function updateActiveLayersBadge() {
+            const count = Object.values(enabledLayers).filter(Boolean).length;
+            const el = document.getElementById('active-calendars-count');
+            if (el) el.textContent = count;
+        }
+
+        const todayObj = new Date();
+        const todayStr = formatDateISO(todayObj);
+        let viewYear = todayObj.getFullYear();
+        let viewMonth = todayObj.getMonth();
+        let selectedDateStr = todayStr;
+
+        function formatDateISO(d) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function parseLocalDate(isoStr) {
+            const [y, m, d] = isoStr.split('-').map(Number);
+            return new Date(y, m - 1, d, 12, 0, 0);
+        }
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function showGlobalSafetyBlock(message) {
+            const banner = document.getElementById('safety-block-banner');
+            document.getElementById('safety-block-message').textContent = message;
+            banner.classList.remove('hidden');
+            loadSafetySettings();
+        }
+
+        async function loadSafetySettings() {
+            try {
+                const res = await fetch('/api/calendar/safety-settings');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.success) {
+                    aiSafetyEnabled = Boolean(data.ai_safety_enabled);
+                    canToggleSafety = Boolean(data.can_toggle);
+                    recentSafetyAlerts = data.alerts || [];
+                    updateSafetyBadgeUI();
+                }
+            } catch (e) {}
+        }
+
+        function updateSafetyBadgeUI() {
+            const btn = document.getElementById('safety-status-btn');
+            const lbl = document.getElementById('safety-status-label');
+            if (!btn || !lbl) return;
+            if (aiSafetyEnabled) {
+                lbl.textContent = 'AI Safety: ON';
+                btn.className = 'glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-emerald-500/40 text-emerald-500 hover:bg-emerald-500/10 transition-all';
+            } else {
+                lbl.textContent = 'AI Safety: OFF';
+                btn.className = 'glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 text-[var(--text-subtle)] hover:border-sky-500/40 transition-all';
+            }
+        }
+
+        function openSafetyModal() {
+            const cb = document.getElementById('safety-toggle-checkbox');
+            const hint = document.getElementById('safety-role-hint');
+            const logSec = document.getElementById('safety-alerts-log-section');
+            const logList = document.getElementById('safety-alerts-log-list');
+
+            cb.checked = aiSafetyEnabled;
+            cb.disabled = !canToggleSafety;
+
+            if (canToggleSafety) {
+                hint.textContent = 'Parent/Admin control: Toggle ON to block bad words and unsafe events, or OFF to disable scanning.';
+                logSec.classList.remove('hidden');
+                if (recentSafetyAlerts.length) {
+                    logList.innerHTML = recentSafetyAlerts.map(a => `
+                        <div class="glass-subcard rounded-xl p-2.5 text-xs space-y-0.5 border-rose-500/30">
+                            <div class="flex items-center justify-between">
+                                <span class="font-bold text-rose-500">${escapeHtml(a.username)}</span>
+                                <span class="text-[10px] font-mono text-[var(--text-subtle)]">${escapeHtml(a.created_at || '')}</span>
+                            </div>
+                            <div class="font-semibold">${escapeHtml(a.reason)}</div>
+                            <div class="text-[11px] text-[var(--text-subtle)] truncate">"${escapeHtml(a.content)}"</div>
+                        </div>
+                    `).join('');
+                } else {
+                    logList.innerHTML = '<div class="text-xs text-[var(--text-subtle)] py-2">No blocked calendar events logged.</div>';
+                }
+            } else {
+                hint.textContent = 'Managed by parent/admin account settings.';
+                logSec.classList.add('hidden');
+            }
+
+            document.getElementById('safety-modal').classList.remove('hidden');
+        }
+
+        function closeSafetyModal() {
+            document.getElementById('safety-modal').classList.add('hidden');
+        }
+
+        async function toggleAiSafetySetting(checked) {
+            try {
+                const res = await fetch('/api/calendar/safety-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ai_safety_enabled: checked }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    aiSafetyEnabled = Boolean(data.ai_safety_enabled);
+                    updateSafetyBadgeUI();
+                } else {
+                    document.getElementById('safety-toggle-checkbox').checked = aiSafetyEnabled;
+                    alert(data.error || 'Unable to update setting');
+                }
+            } catch (e) {}
+        }
+
+        async function loadFamilyMembers() {
+            try {
+                const res = await fetch('/api/calendar/members');
+                if (!res.ok) return;
+                const data = await res.json();
+                if (data.success) {
+                    familyMembers = data.members || [];
+                }
+            } catch (e) {}
+        }
+
+        function toggleCustomSharePicker() {
+            const vis = document.getElementById('ev-visibility').value;
+            const box = document.getElementById('custom-share-box');
+            if (vis === 'custom') {
+                box.classList.remove('hidden');
+                renderCustomShareChips();
+            } else {
+                box.classList.add('hidden');
+            }
+        }
+
+        function renderCustomShareChips() {
+            const container = document.getElementById('custom-share-members');
+            const others = familyMembers.filter(m => m.username.toLowerCase() !== currentUser.toLowerCase());
+            if (!others.length) {
+                container.innerHTML = '<span class="text-xs text-[var(--text-subtle)]">No other family accounts found.</span>';
+                return;
+            }
+            container.innerHTML = others.map(m => {
+                const active = selectedShareUsers.has(m.username);
+                return `
+                    <button
+                        type="button"
+                        onclick="toggleShareRecipient('${escapeHtml(m.username)}')"
+                        class="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
+                            active
+                                ? 'bg-indigo-500 text-white shadow-sm'
+                                : 'glass-subcard text-[var(--text-main)] hover:border-indigo-400'
+                        }"
+                    >
+                        <span>${escapeHtml(m.username)}</span>
+                        <span class="text-[10px] opacity-75">(${escapeHtml(m.role)})</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function toggleShareRecipient(username) {
+            if (selectedShareUsers.has(username)) {
+                selectedShareUsers.delete(username);
+            } else {
+                selectedShareUsers.add(username);
+            }
+            renderCustomShareChips();
+        }
+
+        /* Expand repeating events */
+        function expandRecurringEvents(events, rangeStartStr, rangeEndStr) {
+            const rangeStart = parseLocalDate(rangeStartStr);
+            const rangeEnd = parseLocalDate(rangeEndStr);
+            const result = [];
+
+            events.forEach(ev => {
+                const rule = (ev.repeat_rule || 'none').toLowerCase();
+                if (rule === 'none') {
+                    result.push(ev);
+                    return;
+                }
+                const baseDate = parseLocalDate(ev.event_date);
+                const untilDate = ev.repeat_until ? parseLocalDate(ev.repeat_until) : rangeEnd;
+                const effectiveEnd = untilDate < rangeEnd ? untilDate : rangeEnd;
+
+                let cursor = new Date(baseDate);
+                let safety = 0;
+                while (cursor <= effectiveEnd && safety < 800) {
+                    safety += 1;
+                    if (cursor >= rangeStart) {
+                        const iso = formatDateISO(cursor);
+                        result.push({ ...ev, event_date: iso, is_occurrence: iso !== ev.event_date });
+                    }
+                    if (rule === 'daily') cursor.setDate(cursor.getDate() + 1);
+                    else if (rule === 'weekly') cursor.setDate(cursor.getDate() + 7);
+                    else if (rule === 'biweekly') cursor.setDate(cursor.getDate() + 14);
+                    else if (rule === 'monthly') {
+                        const targetDay = baseDate.getDate();
+                        const nextMonth = cursor.getMonth() + 1;
+                        const nextYear = cursor.getFullYear() + Math.floor(nextMonth / 12);
+                        const modMonth = nextMonth % 12;
+                        const maxDays = new Date(nextYear, modMonth + 1, 0).getDate();
+                        cursor = new Date(nextYear, modMonth, Math.min(targetDay, maxDays), 12, 0, 0);
+                    } else if (rule === 'yearly') {
+                        cursor = new Date(cursor.getFullYear() + 1, baseDate.getMonth(), baseDate.getDate(), 12, 0, 0);
+                    } else break;
+                }
+            });
+            return result;
+        }
+
+        /* Religious & Cultural Celebrations */
+        const celebrationCache = {};
+        function getCelebrationsForYears(years) {
+            const items = [];
+            years.forEach(yr => {
+                if (!celebrationCache[yr]) celebrationCache[yr] = buildYearCelebrations(yr);
+                celebrationCache[yr].forEach(ev => {
+                    if (enabledLayers[ev.layer]) items.push(ev);
+                });
+            });
+            return items;
+        }
+
+        function buildYearCelebrations(year) {
+            const list = [];
+            const add = (layer, dateStr, title, desc, cat = 'religious') => {
+                list.push({
+                    id: `cel-${layer}-${dateStr}-${title}`,
+                    title,
+                    event_date: dateStr,
+                    description: desc,
+                    category: cat,
+                    visibility: 'shared',
+                    username: layer,
+                    layer,
+                    is_celebration: true,
+                });
+            };
+            const nthWeekday = (y, m, weekday, n) => {
+                const first = new Date(y, m, 1).getDay();
+                const offset = (weekday - first + 7) % 7;
+                return formatDateISO(new Date(y, m, 1 + offset + (n - 1) * 7));
+            };
+            const lastMondayBeforeMay25 = (y) => {
+                const d = new Date(y, 4, 24);
+                while (d.getDay() !== 1) d.setDate(d.getDate() - 1);
+                return formatDateISO(d);
+            };
+            const getEasterDate = (y) => {
+                const a = y % 19, b = Math.floor(y / 100), c = y % 100;
+                const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+                const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+                const i = Math.floor(c / 4), k = c % 4;
+                const l = (32 + 2 * e + 2 * i - h - k) % 7;
+                const m = Math.floor((a + 11 * h + 22 * l) / 451);
+                const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+                const day = ((h + l - 7 * m + 114) % 31) + 1;
+                return new Date(y, month, day, 12, 0, 0);
+            };
+            const shiftDays = (d, delta) => {
+                const copy = new Date(d);
+                copy.setDate(copy.getDate() + delta);
+                return formatDateISO(copy);
+            };
+
+            add('ca_qc', `${year}-01-01`, "New Year's Day", 'Statutory Holiday (Canada & Quebec)', 'holiday');
+            add('ca_qc', lastMondayBeforeMay25(year), "National Patriots' Day / Victoria Day", 'Statutory Holiday in Quebec & Canada', 'holiday');
+            add('ca_qc', `${year}-06-24`, 'Fête nationale du Québec', 'Saint-Jean-Baptiste Day (Quebec)', 'holiday');
+            add('ca_qc', `${year}-07-01`, 'Canada Day', 'National Statutory Holiday', 'holiday');
+            add('ca_qc', nthWeekday(year, 8, 1, 1), 'Labour Day', 'First Monday in September', 'holiday');
+            add('ca_qc', `${year}-09-30`, 'National Day for Truth and Reconciliation', 'Federal Observance', 'holiday');
+            add('ca_qc', nthWeekday(year, 9, 1, 2), 'Thanksgiving (Canada)', 'Second Monday in October', 'holiday');
+            add('ca_qc', `${year}-11-11`, 'Remembrance Day', 'Honouring Canadian Veterans', 'holiday');
+            add('ca_qc', `${year}-12-25`, 'Christmas Day', 'Statutory Holiday', 'holiday');
+            add('ca_qc', `${year}-12-26`, 'Boxing Day', 'Canadian Holiday', 'holiday');
+
+            const easter = getEasterDate(year);
+            add('christian', shiftDays(easter, -46), 'Ash Wednesday', 'First day of Lent');
+            add('christian', shiftDays(easter, -7), 'Palm Sunday', 'Beginning of Holy Week');
+            add('christian', shiftDays(easter, -2), 'Good Friday', 'Christian Holy Day & Statutory Holiday');
+            add('christian', formatDateISO(easter), 'Easter Sunday', 'Celebration of the Resurrection');
+            add('christian', shiftDays(easter, 1), 'Easter Monday', 'Easter Holiday');
+            add('christian', shiftDays(easter, 49), 'Pentecost', '50 days after Easter');
+            add('christian', `${year}-11-01`, "All Saints' Day", 'Christian Feast Day');
+            add('christian', `${year}-12-24`, 'Christmas Eve', 'Evening before Christmas');
+            add('christian', `${year}-12-25`, 'Christmas Day', 'Nativity of Jesus');
+
+            add('international', `${year}-02-14`, "Valentine's Day", 'Day of friendship and appreciation', 'holiday');
+            add('international', `${year}-03-17`, "St. Patrick's Day", 'Irish cultural celebration', 'holiday');
+            add('international', `${year}-04-22`, 'Earth Day', 'Global environmental protection day', 'holiday');
+            add('international', nthWeekday(year, 4, 0, 2), "Mother's Day", 'Second Sunday in May', 'holiday');
+            add('international', nthWeekday(year, 5, 0, 3), "Father's Day", 'Third Sunday in June', 'holiday');
+            add('international', `${year}-06-21`, 'Summer Solstice', 'Longest day of the year', 'holiday');
+            add('international', `${year}-10-31`, 'Halloween', 'Autumn costume night', 'holiday');
+            add('international', `${year}-12-21`, 'Winter Solstice', 'Shortest day of the year', 'holiday');
+            add('international', `${year}-12-31`, "New Year's Eve", 'Final evening of the year', 'holiday');
+
+            let islamicFmt = null, hebrewFmt = null, chineseFmt = null;
+            try { islamicFmt = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', { month: 'numeric', day: 'numeric' }); } catch (e) {}
+            try { hebrewFmt = new Intl.DateTimeFormat('en-US-u-ca-hebrew', { month: 'long', day: 'numeric' }); } catch (e) {}
+            try { chineseFmt = new Intl.DateTimeFormat('en-US-u-ca-chinese', { month: 'numeric', day: 'numeric' }); } catch (e) {}
+
+            const islamicMap = {
+                '1/1': ['Islamic New Year (1 Muharram)', 'First day of the Hijri lunar year'],
+                '1/10': ['Day of Ashura', '10th of Muharram observance'],
+                '3/12': ['Mawlid al-Nabi', 'Observance of the birth of Prophet Muhammad'],
+                '9/1': ['Ramadan Begins', 'First day of the sacred month of fasting (Ramadan)'],
+                '9/27': ['Laylat al-Qadr (Night of Power)', 'Sacred night during the last ten nights of Ramadan'],
+                '10/1': ['Eid al-Fitr', 'Festival of Breaking the Fast at the end of Ramadan'],
+                '12/9': ['Day of Arafah', '9th of Dhu al-Hijjah during the Hajj pilgrimage'],
+                '12/10': ['Eid al-Adha', 'Festival of Sacrifice'],
+            };
+            const hebrewMap = {
+                'Tishrei 1': ['Rosh Hashanah', 'Jewish New Year'],
+                'Tishrei 10': ['Yom Kippur', 'Day of Atonement'],
+                'Tishrei 15': ['Sukkot (Begins)', 'Feast of Tabernacles'],
+                'Kislev 25': ['Hanukkah (Night 1)', 'Eight-day Festival of Lights'],
+                'Adar 14': ['Purim', 'Festival of Lots'],
+                'Adar II 14': ['Purim', 'Festival of Lots'],
+                'Nisan 15': ['Passover / Pesach (Begins)', 'Festival of Freedom'],
+                'Sivan 6': ['Shavuot', 'Festival of Weeks'],
+            };
+            const chineseMap = {
+                '1/1': ['Lunar New Year (Spring Festival)', 'First day of the Chinese lunisolar calendar'],
+                '1/15': ['Lantern Festival', '15th day of the first lunar month'],
+                '5/5': ['Dragon Boat Festival', '5th day of the 5th lunar month'],
+                '7/7': ['Qixi Festival', 'Traditional double-seventh festival'],
+                '8/15': ['Mid-Autumn Festival', 'Harvest moon and mooncake celebration'],
+                '9/9': ['Double Ninth Festival', 'Chongyang autumn festival'],
+            };
+
+            for (let m = 0; m < 12; m++) {
+                const days = new Date(year, m + 1, 0).getDate();
+                for (let d = 1; d <= days; d++) {
+                    const dt = new Date(year, m, d, 12, 0, 0);
+                    const iso = formatDateISO(dt);
+                    if (islamicFmt) {
+                        const key = islamicFmt.format(dt);
+                        if (islamicMap[key]) add('islamic', iso, islamicMap[key][0], islamicMap[key][1]);
+                    }
+                    if (hebrewFmt) {
+                        const key = hebrewFmt.format(dt);
+                        if (hebrewMap[key]) add('jewish', iso, hebrewMap[key][0], hebrewMap[key][1]);
+                    }
+                    if (chineseFmt) {
+                        const raw = chineseFmt.format(dt).replace(/[^0-9/]/g, '');
+                        if (chineseMap[raw]) add('lunar', iso, chineseMap[raw][0], chineseMap[raw][1]);
+                    }
+                }
+            }
+
+            const hinduSikhByYear = {
+                2026: [
+                    ['2026-02-15', 'Maha Shivaratri', 'Hindu festival honouring Lord Shiva'],
+                    ['2026-03-04', 'Holi', 'Festival of Colours and Spring'],
+                    ['2026-04-14', 'Vaisakhi', 'Sikh New Year and Khalsa Foundation Day'],
+                    ['2026-08-28', 'Raksha Bandhan', 'Celebration of sibling bond'],
+                    ['2026-09-04', 'Janmashtami', 'Birth of Lord Krishna'],
+                    ['2026-10-11', 'Sharad Navratri Begins', 'Nine nights of celebration'],
+                    ['2026-11-08', 'Diwali / Bandi Chhor Divas', 'Festival of Lights'],
+                ],
+                2027: [
+                    ['2027-03-06', 'Maha Shivaratri', 'Hindu festival honouring Lord Shiva'],
+                    ['2027-03-22', 'Holi', 'Festival of Colours and Spring'],
+                    ['2027-04-14', 'Vaisakhi', 'Sikh New Year and Khalsa Foundation Day'],
+                    ['2027-08-17', 'Raksha Bandhan', 'Celebration of sibling bond'],
+                    ['2027-08-25', 'Janmashtami', 'Birth of Lord Krishna'],
+                    ['2027-09-30', 'Sharad Navratri Begins', 'Nine nights of celebration'],
+                    ['2027-10-29', 'Diwali / Bandi Chhor Divas', 'Festival of Lights'],
+                ],
+            };
+            (hinduSikhByYear[year] || []).forEach(([dt, title, desc]) => add('hindu_sikh', dt, title, desc));
+            return list;
+        }
+
+        function getCombinedEvents() {
+            const rangeStart = `${viewYear - 1}-01-01`;
+            const rangeEnd = `${viewYear + 1}-12-31`;
+            const expandedUserEvents = expandRecurringEvents(rawEvents, rangeStart, rangeEnd);
+            const celebrations = getCelebrationsForYears([viewYear - 1, viewYear, viewYear + 1]);
+
+            const list = expandedUserEvents.concat(celebrations);
+            const vis = document.getElementById('visibility-filter').value;
+            const q = (document.getElementById('event-search-input').value || '').trim().toLowerCase();
+
+            return list.filter(ev => {
+                if (categoryFilter !== 'all' && ev.category !== categoryFilter) return false;
+                if (!ev.is_celebration && vis !== 'all' && ev.visibility !== vis) return false;
+                if (q) {
+                    const hay = `${ev.title || ''} ${ev.description || ''} ${ev.location || ''} ${ev.shared_with || ''}`.toLowerCase();
+                    if (!hay.includes(q)) return false;
+                }
+                return true;
+            });
+        }
+
+        function toggleTheme() {
+            const dark = !document.documentElement.classList.contains('dark');
+            document.documentElement.classList.toggle('dark', dark);
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+        }
+
+        function signOut() {
+            fetch('/api/logout', { method: 'POST' }).then(() => { window.location.href = '/'; });
+        }
+
+        function setCategoryFilter(cat) {
+            categoryFilter = cat;
+            document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+                btn.className = btn.dataset.catFilter === cat
+                    ? 'cat-filter-btn px-2.5 py-1 rounded-xl font-semibold bg-sky-500 text-white transition-all'
+                    : 'cat-filter-btn px-2.5 py-1 rounded-xl font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all';
+            });
+            renderAll();
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.querySelectorAll('.view-mode-btn').forEach(btn => {
+                btn.className = btn.dataset.viewMode === mode
+                    ? 'view-mode-btn px-2.5 py-1 rounded-lg font-bold bg-sky-500 text-white transition-all'
+                    : 'view-mode-btn px-2.5 py-1 rounded-lg font-medium text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all';
+            });
+            document.getElementById('month-view-container').classList.toggle('hidden', mode !== 'month');
+            document.getElementById('week-view-container').classList.toggle('hidden', mode !== 'week');
+            document.getElementById('list-view-container').classList.toggle('hidden', mode !== 'list');
+            renderAll();
+        }
+
+        async function loadEvents() {
+            try {
+                const res = await fetch('/api/calendar/events');
+                if (res.status === 401) { window.location.href = '/'; return; }
+                const data = await res.json();
+                if (data && data.success) rawEvents = data.events || [];
+            } catch (err) {}
+            renderAll();
+        }
+
+        function navigatePeriod(delta) {
+            if (viewMode === 'week') {
+                const d = parseLocalDate(selectedDateStr);
+                d.setDate(d.getDate() + delta * 7);
+                selectedDateStr = formatDateISO(d);
+                viewYear = d.getFullYear();
+                viewMonth = d.getMonth();
+            } else {
+                viewMonth += delta;
+                if (viewMonth < 0) { viewMonth = 11; viewYear -= 1; }
+                else if (viewMonth > 11) { viewMonth = 0; viewYear += 1; }
+            }
+            renderAll();
+        }
+
+        function jumpToToday() {
+            const now = new Date();
+            viewYear = now.getFullYear();
+            viewMonth = now.getMonth();
+            selectedDateStr = formatDateISO(now);
+            renderAll();
+        }
+
+        function selectDate(dateStr) {
+            selectedDateStr = dateStr;
+            const d = parseLocalDate(dateStr);
+            if (d.getFullYear() !== viewYear || d.getMonth() !== viewMonth) {
+                viewYear = d.getFullYear();
+                viewMonth = d.getMonth();
+            }
+            renderAll();
+        }
+
+        function renderAll() {
+            const filtered = getCombinedEvents();
+            updateHeaderStats(filtered);
+            if (viewMode === 'month') renderCalendarGrid(filtered);
+            if (viewMode === 'week') renderWeekView(filtered);
+            if (viewMode === 'list') renderAgendaListView(filtered);
+            renderSelectedDayAgenda(filtered);
+            renderUpcomingEvents(filtered);
+        }
+
+        function updateHeaderStats(filtered) {
+            const firstOfMonth = new Date(viewYear, viewMonth, 1);
+            document.getElementById('month-year-title').textContent = firstOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+            const personalMonthEvents = filtered.filter(e => !e.is_celebration && (e.event_date || '').startsWith(monthPrefix));
+            document.getElementById('month-event-count').textContent = `${personalMonthEvents.length} ${personalMonthEvents.length === 1 ? 'event' : 'events'}`;
+
+            const nextText = document.getElementById('next-event-text');
+            const upcoming = filtered
+                .filter(e => e.event_date >= todayStr)
+                .sort((a, b) => (a.event_date + (a.start_time || '')).localeCompare(b.event_date + (b.start_time || '')));
+            nextText.textContent = upcoming.length
+                ? `${upcoming[0].title} (${formatRelativeDays(upcoming[0].event_date)})`
+                : 'No upcoming events';
+        }
+
+        function isReminderCompleted(ev, dateStr) {
+            if (ev.category !== 'reminder') return false;
+            if (!ev.repeat_rule || ev.repeat_rule === 'none') {
+                return Boolean(ev.is_completed);
+            }
+            const doneDates = (ev.completed_dates || '').split(',').map(s => s.trim()).filter(Boolean);
+            return doneDates.includes(dateStr || ev.event_date);
+        }
+
+        async function toggleReminderCheck(eventId, dateStr, e) {
+            if (e) e.stopPropagation();
+            try {
+                const res = await fetch(`/api/reminders/${eventId}/toggle`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ occurrence_date: dateStr }),
+                });
+                const data = await res.json();
+                if (data.success && data.event) {
+                    const idx = rawEvents.findIndex(item => item.id === eventId);
+                    if (idx !== -1) rawEvents[idx] = data.event;
+                    renderAll();
+                }
+            } catch (err) {}
+        }
+
+        function renderCalendarGrid(filtered) {
+            const grid = document.getElementById('calendar-grid');
+            const firstOfMonth = new Date(viewYear, viewMonth, 1);
+            const byDate = {};
+            filtered.forEach(ev => {
+                if (!byDate[ev.event_date]) byDate[ev.event_date] = [];
+                byDate[ev.event_date].push(ev);
+            });
+
+            const startWeekday = firstOfMonth.getDay();
+            const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+            const prevMonthDays = new Date(viewYear, viewMonth, 0).getDate();
+            const totalCells = Math.ceil((startWeekday + daysInMonth) / 7) * 7;
+
+            let html = '';
+            for (let i = 0; i < totalCells; i++) {
+                let cellDate, outside = false;
+                if (i < startWeekday) {
+                    cellDate = new Date(viewYear, viewMonth - 1, prevMonthDays - startWeekday + i + 1);
+                    outside = true;
+                } else if (i >= startWeekday + daysInMonth) {
+                    cellDate = new Date(viewYear, viewMonth + 1, i - (startWeekday + daysInMonth) + 1);
+                    outside = true;
+                } else {
+                    cellDate = new Date(viewYear, viewMonth, i - startWeekday + 1);
+                }
+
+                const iso = formatDateISO(cellDate);
+                const dayEvents = byDate[iso] || [];
+                const isToday = iso === todayStr;
+                const isSelected = iso === selectedDateStr;
+                const isWeekend = cellDate.getDay() === 0 || cellDate.getDay() === 6;
+
+                const pillsHtml = dayEvents.slice(0, 3).map(ev => {
+                const cat = ['family', 'school', 'activity', 'reminder', 'holiday', 'religious'].includes(ev.category) ? ev.category : 'family';
+                const done = isReminderCompleted(ev, iso);
+                const timeTag = ev.start_time ? `<span class="font-mono opacity-80 mr-1">${escapeHtml(ev.start_time)}</span>` : '';
+                const repMark = ev.repeat_rule && ev.repeat_rule !== 'none' ? ' ↻' : '';
+                const checkPrefix = ev.category === 'reminder' ? (done ? '✓ ' : '○ ') : '';
+                return `<div class="cat-${cat} px-1.5 py-0.5 rounded-md text-[10px] font-semibold truncate leading-tight ${done ? 'line-through opacity-55' : ''}">${checkPrefix}${timeTag}${escapeHtml(ev.title)}${repMark}</div>`;
+            }).join('');
+
+                const overflowHtml = dayEvents.length > 3
+                    ? `<div class="text-[10px] font-mono text-[var(--text-subtle)] px-1">+${dayEvents.length - 3} more</div>`
+                    : '';
+
+                html += `
+                    <div onclick="selectDate('${iso}')" ondblclick="openEventModal(null, '${iso}')"
+                        class="day-cell rounded-2xl p-2 cursor-pointer flex flex-col justify-between ${outside ? 'outside-month' : ''} ${isWeekend ? 'weekend-cell' : ''} ${isToday ? 'today-cell' : ''} ${isSelected ? 'selected-day' : ''}">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="day-number w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center">${cellDate.getDate()}</span>
+                            ${dayEvents.length ? `<span class="text-[10px] font-mono text-[var(--text-subtle)] hidden sm:inline">${dayEvents.length}</span>` : ''}
+                        </div>
+                        <div class="space-y-1 overflow-hidden">${pillsHtml}${overflowHtml}</div>
+                    </div>
+                `;
+            }
+            grid.innerHTML = html;
+        }
+
+        function renderWeekView(filtered) {
+            const container = document.getElementById('week-grid');
+            const anchor = parseLocalDate(selectedDateStr);
+            const sunday = new Date(anchor);
+            sunday.setDate(anchor.getDate() - anchor.getDay());
+
+            let html = '';
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(sunday);
+                d.setDate(sunday.getDate() + i);
+                const iso = formatDateISO(d);
+                const dayEvents = filtered.filter(e => e.event_date === iso);
+                const isToday = iso === todayStr;
+                const isSelected = iso === selectedDateStr;
+
+                html += `
+                    <div onclick="selectDate('${iso}')" ondblclick="openEventModal(null, '${iso}')" class="day-cell rounded-2xl p-3 cursor-pointer flex flex-col min-h-[340px] ${isToday ? 'today-cell' : ''} ${isSelected ? 'selected-day' : ''}">
+                        <div class="flex items-center justify-between pb-2 mb-2.5 border-b border-[var(--glass-border)]">
+                            <span class="text-[11px] font-bold uppercase tracking-wider text-[var(--text-subtle)]">${d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                            <span class="day-number w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center">${d.getDate()}</span>
+                        </div>
+                        <div class="space-y-2 flex-1">
+                            ${dayEvents.length ? dayEvents.map(ev => {
+                                const cat = ['family', 'school', 'activity', 'reminder', 'holiday', 'religious'].includes(ev.category) ? ev.category : 'family';
+                                return `<div class="cat-${cat} p-2 rounded-xl text-xs space-y-0.5"><div class="font-bold leading-snug">${escapeHtml(ev.title)}</div>${ev.start_time ? `<div class="text-[10px] font-mono opacity-80">${escapeHtml(ev.start_time)}</div>` : ''}</div>`;
+                            }).join('') : `<div class="text-[11px] text-[var(--text-subtle)] opacity-60 pt-4 text-center">No events</div>`}
+                        </div>
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function renderAgendaListView(filtered) {
+            const container = document.getElementById('list-view-container');
+            const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+            const items = filtered
+                .filter(e => (e.event_date || '').startsWith(monthPrefix))
+                .sort((a, b) => (a.event_date + (a.start_time || '')).localeCompare(b.event_date + (b.start_time || '')));
+
+            if (!items.length) {
+                container.innerHTML = `<div class="glass-subcard rounded-2xl p-10 text-center text-xs text-[var(--text-subtle)]">No events scheduled for this month.</div>`;
+                return;
+            }
+
+            container.innerHTML = items.map(ev => {
+                const cat = ['family', 'school', 'activity', 'reminder', 'holiday', 'religious'].includes(ev.category) ? ev.category : 'family';
+                const d = parseLocalDate(ev.event_date);
+                return `
+                    <div onclick="selectDate('${ev.event_date}')" class="glass-subcard rounded-2xl p-3.5 flex items-center justify-between gap-3 cursor-pointer">
+                        <div class="flex items-center gap-3.5 min-w-0">
+                            <div class="w-12 text-center flex-shrink-0">
+                                <div class="text-[10px] font-bold uppercase text-sky-500">${d.toLocaleDateString('en-US', { month: 'short' })}</div>
+                                <div class="text-lg font-extrabold leading-tight">${d.getDate()}</div>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="cat-${cat} px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">${escapeHtml(cat)}</span>
+                                    <span class="text-xs font-mono text-[var(--text-subtle)]">${ev.start_time || 'All Day'}</span>
+                                </div>
+                                <div class="font-bold text-sm mt-1 truncate">${escapeHtml(ev.title)}</div>
+                            </div>
+                        </div>
+                        <span class="text-[11px] font-mono text-[var(--text-subtle)] flex-shrink-0">${formatRelativeDays(ev.event_date)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function formatRelativeDays(isoStr) {
+            const target = parseLocalDate(isoStr);
+            const now = parseLocalDate(todayStr);
+            const diffDays = Math.round((target - now) / (1000 * 60 * 60 * 24));
+            if (diffDays === 0) return 'Today';
+            if (diffDays === 1) return 'Tomorrow';
+            if (diffDays === -1) return 'Yesterday';
+            if (diffDays > 1) return `In ${diffDays} days`;
+            return `${Math.abs(diffDays)} days ago`;
+        }
+
+        function canEditEvent(ev) {
+            if (ev.is_celebration) return false;
+            return ev.username === currentUser || currentRole === 'parent' || currentRole === 'admin';
+        }
+
+        function renderSelectedDayAgenda(filtered) {
+            const titleEl = document.getElementById('selected-day-title');
+            const relEl = document.getElementById('selected-day-relative');
+            const listEl = document.getElementById('day-events-list');
+
+            const d = parseLocalDate(selectedDateStr);
+            titleEl.textContent = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+            relEl.textContent = formatRelativeDays(selectedDateStr);
+
+            const dayEvents = filtered.filter(ev => ev.event_date === selectedDateStr);
+            if (!dayEvents.length) {
+                listEl.innerHTML = `
+                    <div class="glass-subcard rounded-2xl p-8 text-center space-y-2.5">
+                        <p class="text-xs text-[var(--text-subtle)]">No events scheduled for this date.</p>
+                        <button onclick="openEventModal(null, '${selectedDateStr}')" class="px-3.5 py-1.5 rounded-xl bg-sky-500/15 text-sky-500 border border-sky-500/30 text-xs font-bold hover:bg-sky-500 hover:text-white transition-all">
+                            + Add Event
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            const repeatLabels = { daily: 'Daily', weekly: 'Weekly', biweekly: 'Every 2 wks', monthly: 'Monthly', yearly: 'Yearly' };
+
+            listEl.innerHTML = dayEvents.map(ev => {
+                const cat = ['family', 'school', 'activity', 'reminder', 'holiday', 'religious'].includes(ev.category) ? ev.category : 'family';
+                const timeRange = ev.start_time
+                    ? (ev.end_time ? `${ev.start_time} – ${ev.end_time}` : ev.start_time)
+                    : 'All Day';
+                const editable = canEditEvent(ev);
+                const repBadge = ev.repeat_rule && ev.repeat_rule !== 'none'
+                    ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-400/30">↻ ${repeatLabels[ev.repeat_rule] || ev.repeat_rule}</span>`
+                    : '';
+
+                let visBadge = '';
+                if (ev.is_celebration) {
+                    visBadge = `<span class="text-[10px] font-semibold text-teal-500">Celebration</span>`;
+                } else if (ev.visibility === 'private') {
+                    visBadge = `<span class="text-[10px] font-semibold text-amber-500">Private</span>`;
+                } else if (ev.visibility === 'custom') {
+                    const who = (ev.shared_with || '').split(',').filter(Boolean).join(', ');
+                    visBadge = `<span class="text-[10px] font-semibold text-indigo-400">Shared with ${escapeHtml(who || 'Selected')}</span>`;
+                } else {
+                    visBadge = `<span class="text-[10px] font-semibold text-[var(--text-subtle)]">Shared Family</span>`;
+                }
+
+                return `
+                    <div class="glass-subcard rounded-2xl p-3.5 space-y-2">
+                        <div class="flex items-center justify-between gap-2 flex-wrap">
+                            <div class="flex items-center gap-1.5">
+                                <span class="cat-${cat} px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider">${escapeHtml(cat)}</span>
+                                ${repBadge}
+                            </div>
+                            <span class="text-xs font-mono font-semibold text-[var(--text-muted)]">${escapeHtml(timeRange)}</span>
+                        </div>
+                        <div class="font-bold text-sm leading-snug">${escapeHtml(ev.title)}</div>
+                        ${ev.location ? `<div class="text-[11px] text-sky-500 font-semibold">${escapeHtml(ev.location)}</div>` : ''}
+                        ${ev.description ? `<p class="text-xs text-[var(--text-muted)] leading-relaxed">${escapeHtml(ev.description)}</p>` : ''}
+                        <div class="pt-2 border-t border-[var(--glass-border)] flex items-center justify-between text-[11px]">
+                            <div class="flex items-center gap-2.5">
+                                ${ev.is_celebration ? '' : `<span class="text-[var(--text-subtle)]">By <strong class="text-[var(--text-main)]">${escapeHtml(ev.username)}</strong></span>`}
+                                ${visBadge}
+                            </div>
+                            ${editable ? `
+                                <div class="flex items-center gap-2.5">
+                                    <button onclick="openEventModal(${ev.id})" class="text-sky-500 hover:underline font-bold">Edit</button>
+                                    <button onclick="deleteEventById(${ev.id})" class="text-rose-500 hover:underline font-bold">Delete</button>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderUpcomingEvents(filtered) {
+            const container = document.getElementById('upcoming-events-list');
+            const now = parseLocalDate(todayStr);
+            const limit = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+            const upcoming = filtered
+                .filter(ev => {
+                    const d = parseLocalDate(ev.event_date);
+                    return d >= now && d <= limit;
+                })
+                .sort((a, b) => (a.event_date + (a.start_time || '')).localeCompare(b.event_date + (b.start_time || '')))
+                .slice(0, 8);
+
+            if (!upcoming.length) {
+                container.innerHTML = '<div class="text-xs text-[var(--text-subtle)] py-3 text-center">No events in the next 30 days.</div>';
+                return;
+            }
+
+            container.innerHTML = upcoming.map(ev => {
+                const cat = ['family', 'school', 'activity', 'reminder', 'holiday', 'religious'].includes(ev.category) ? ev.category : 'family';
+                const d = parseLocalDate(ev.event_date);
+                const shortDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return `
+                    <button onclick="selectDate('${ev.event_date}')" class="w-full text-left glass-subcard rounded-xl p-2.5 flex items-center justify-between gap-2.5 hover:border-sky-500/50 transition-all">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <span class="w-2.5 h-2.5 rounded-full dot-${cat} flex-shrink-0"></span>
+                            <div class="truncate">
+                                <div class="text-xs font-bold truncate">${escapeHtml(ev.title)}</div>
+                                <div class="text-[10px] text-[var(--text-subtle)]">${shortDate}${ev.start_time ? ' · ' + escapeHtml(ev.start_time) : ''}</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-mono text-[var(--text-subtle)] flex-shrink-0">${formatRelativeDays(ev.event_date)}</span>
+                    </button>
+                `;
+            }).join('');
+        }
+
+        /* Manual Modal Helpers */
+        function toggleAllDayInputs() {
+            const allDay = document.getElementById('ev-allday').checked;
+            const row = document.getElementById('ev-time-row');
+            row.classList.toggle('opacity-40', allDay);
+            row.classList.toggle('pointer-events-none', allDay);
+            if (allDay) {
+                document.getElementById('ev-start').value = '';
+                document.getElementById('ev-end').value = '';
+            }
+        }
+
+        function toggleRepeatUntil() {
+            const rep = document.getElementById('ev-repeat').value;
+            const wrap = document.getElementById('ev-repeat-until-wrap');
+            const active = rep !== 'none';
+            wrap.classList.toggle('opacity-50', !active);
+            wrap.classList.toggle('pointer-events-none', !active);
+            if (!active) document.getElementById('ev-repeat-until').value = '';
+        }
+
+        function openEventModal(eventId = null, presetDate = null, presetData = null) {
+            const modal = document.getElementById('event-modal');
+            const titleEl = document.getElementById('modal-title');
+            const deleteBtn = document.getElementById('ev-delete-btn');
+            document.getElementById('modal-safety-alert').classList.add('hidden');
+            selectedShareUsers = new Set();
+
+            if (eventId) {
+                const ev = rawEvents.find(e => e.id === eventId);
+                if (!ev) return;
+                titleEl.textContent = 'Edit Calendar Event';
+                document.getElementById('ev-id').value = ev.id;
+                document.getElementById('ev-title').value = ev.title;
+                document.getElementById('ev-date').value = ev.event_date;
+                document.getElementById('ev-start').value = ev.start_time || '';
+                document.getElementById('ev-end').value = ev.end_time || '';
+                document.getElementById('ev-allday').checked = !ev.start_time && !ev.end_time;
+                document.getElementById('ev-repeat').value = ev.repeat_rule || 'none';
+                document.getElementById('ev-repeat-until').value = ev.repeat_until || '';
+                document.getElementById('ev-category').value = ev.category || 'family';
+                document.getElementById('ev-visibility').value = ev.visibility || 'shared';
+                if (ev.shared_with) {
+                    ev.shared_with.split(',').map(x => x.trim()).filter(Boolean).forEach(u => selectedShareUsers.add(u));
+                }
+                document.getElementById('ev-location').value = ev.location || '';
+                document.getElementById('ev-description').value = ev.description || '';
+                deleteBtn.classList.remove('hidden');
+            } else {
+                titleEl.textContent = presetData ? 'Review Parsed Event' : 'New Calendar Event';
+                document.getElementById('ev-id').value = '';
+                document.getElementById('ev-title').value = (presetData && presetData.title) || '';
+                document.getElementById('ev-date').value = (presetData && presetData.event_date) || presetDate || selectedDateStr;
+                document.getElementById('ev-start').value = (presetData && presetData.start_time) || '';
+                document.getElementById('ev-end').value = (presetData && presetData.end_time) || '';
+                document.getElementById('ev-allday').checked = Boolean(presetData && !presetData.start_time && !presetData.end_time);
+                document.getElementById('ev-repeat').value = (presetData && presetData.repeat_rule) || 'none';
+                document.getElementById('ev-repeat-until').value = (presetData && presetData.repeat_until) || '';
+                document.getElementById('ev-category').value = (presetData && presetData.category) || 'family';
+                document.getElementById('ev-visibility').value = (presetData && presetData.visibility) || 'shared';
+                if (presetData && presetData.shared_with) {
+                    String(presetData.shared_with).split(',').map(x => x.trim()).filter(Boolean).forEach(u => selectedShareUsers.add(u));
+                }
+                document.getElementById('ev-location').value = (presetData && presetData.location) || '';
+                document.getElementById('ev-description').value = (presetData && presetData.description) || '';
+                deleteBtn.classList.add('hidden');
+            }
+
+            toggleAllDayInputs();
+            toggleRepeatUntil();
+            toggleCustomSharePicker();
+            modal.classList.remove('hidden');
+            setTimeout(() => document.getElementById('ev-title').focus(), 40);
+        }
+
+        function closeEventModal() {
+            document.getElementById('event-modal').classList.add('hidden');
+        }
+
+        async function saveEvent(e) {
+            e.preventDefault();
+            const id = document.getElementById('ev-id').value;
+            const allDay = document.getElementById('ev-allday').checked;
+            const vis = document.getElementById('ev-visibility').value;
+
+            if (vis === 'custom' && selectedShareUsers.size === 0) {
+                alert('Please select at least one family member for Custom Share.');
+                return;
+            }
+
+            const payload = {
+                title: document.getElementById('ev-title').value.trim(),
+                event_date: document.getElementById('ev-date').value,
+                start_time: allDay ? '' : document.getElementById('ev-start').value,
+                end_time: allDay ? '' : document.getElementById('ev-end').value,
+                repeat_rule: document.getElementById('ev-repeat').value,
+                repeat_until: document.getElementById('ev-repeat-until').value,
+                category: document.getElementById('ev-category').value,
+                visibility: vis,
+                shared_with: vis === 'custom' ? Array.from(selectedShareUsers) : [],
+                location: document.getElementById('ev-location').value.trim(),
+                description: document.getElementById('ev-description').value.trim(),
+            };
+
+            const url = id ? `/api/calendar/events/${id}` : '/api/calendar/events';
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const res = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    selectedDateStr = payload.event_date;
+                    const d = parseLocalDate(selectedDateStr);
+                    viewYear = d.getFullYear();
+                    viewMonth = d.getMonth();
+                    closeEventModal();
+                    await loadEvents();
+                } else if (data.safety_blocked) {
+                    const box = document.getElementById('modal-safety-alert');
+                    document.getElementById('modal-safety-alert-text').textContent = data.error;
+                    box.classList.remove('hidden');
+                    loadSafetySettings();
+                } else {
+                    alert(data.error || 'Could not save event.');
+                }
+            } catch (err) {
+                alert('Server connection failed. Ensure python app.py is running.');
+            }
+        }
+
+        async function deleteEventById(id, skipConfirm = false) {
+            if (!skipConfirm && !confirm('Delete this event from the calendar?')) return;
+            try {
+                const res = await fetch(`/api/calendar/events/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (data.success) {
+                    closeEventModal();
+                    document.getElementById('ai-toast-banner').classList.add('hidden');
+                    await loadEvents();
+                }
+            } catch (err) {}
+        }
+
+        function deleteCurrentModalEvent() {
+            const id = document.getElementById('ev-id').value;
+            if (id) deleteEventById(Number(id));
+        }
+
+        /* Smart Add AI Handler */
+        function localClientParseEvent(text) {
+            let clean = text.trim();
+            const lower = clean.toLowerCase();
+            let eventDate = selectedDateStr;
+            let startTime = '';
+            let repeatRule = 'none';
+            let category = 'family';
+            let visibility = 'shared';
+            let sharedWith = '';
+
+            // Detect "share with <username>"
+            for (const m of familyMembers) {
+                if (m.username.toLowerCase() === currentUser.toLowerCase()) continue;
+                const rx = new RegExp(`\\b(?:share\\s+with|only\\s+with|for)\\s+${m.username}\\b`, 'i');
+                if (rx.test(clean)) {
+                    visibility = 'custom';
+                    sharedWith = m.username;
+                    clean = clean.replace(rx, '');
+                    break;
+                }
+            }
+
+            if (/\b(every day|daily)\b/i.test(lower)) repeatRule = 'daily';
+            else if (/\b(every week|weekly|every (mon|tue|wed|thu|fri|sat|sun)\w*)\b/i.test(lower)) repeatRule = 'weekly';
+            else if (/\b(every month|monthly)\b/i.test(lower)) repeatRule = 'monthly';
+            else if (/\b(every year|yearly)\b/i.test(lower)) repeatRule = 'yearly';
+
+            if (/\b(exam|test|quiz|homework|school|class|study|math|french|english|science)\b/i.test(lower)) category = 'school';
+            else if (/\b(guitar|practice|soccer|match|hockey|swim|music|lesson|game|workout|gym)\b/i.test(lower)) category = 'activity';
+            else if (/\b(remind|reminder|pay|bill|call|check|bring|pack)\b/i.test(lower)) category = 'reminder';
+
+            const now = new Date();
+            const days = { sunday: 0, sun: 0, monday: 1, mon: 1, tuesday: 2, tue: 2, tues: 2, wednesday: 3, wed: 3, thursday: 4, thu: 4, thurs: 4, friday: 5, fri: 5, saturday: 6, sat: 6 };
+            if (/\btomorrow\b/i.test(lower)) {
+                const d = new Date(now);
+                d.setDate(d.getDate() + 1);
+                eventDate = formatDateISO(d);
+                clean = clean.replace(/\btomorrow\b/i, '');
+            } else {
+                const m = lower.match(/\b(?:next|this|on|every)?\s*(sunday|sun|monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thurs|thu|friday|fri|saturday|sat)\b/);
+                if (m) {
+                    const target = days[m[1]];
+                    let diff = (target - now.getDay() + 7) % 7;
+                    if (diff === 0) diff = 7;
+                    const d = new Date(now);
+                    d.setDate(d.getDate() + diff);
+                    eventDate = formatDateISO(d);
+                    clean = clean.replace(/\b(?:next|this|on|every)?\s*(?:sunday|sun|monday|mon|tuesday|tues|tue|wednesday|wed|thursday|thurs|thu|friday|fri|saturday|sat)\b/i, '');
+                }
+            }
+
+            const tm = clean.match(/\b(?:at\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)?\b/i);
+            if (tm && (tm[2] || tm[3])) {
+                let h = parseInt(tm[1], 10);
+                const min = tm[2] || '00';
+                if (tm[3]) {
+                    const ap = tm[3].toLowerCase();
+                    if (ap === 'pm' && h < 12) h += 12;
+                    if (ap === 'am' && h === 12) h = 0;
+                }
+                startTime = `${String(h).padStart(2, '0')}:${min}`;
+                clean = clean.replace(tm[0], '');
+            }
+
+            clean = clean.replace(/\s+/g, ' ').trim();
+            const title = clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : text.trim();
+            return { title, event_date: eventDate, start_time: startTime, end_time: '', category, repeat_rule: repeatRule, visibility, shared_with: sharedWith, location: '', description: '' };
+        }
+
+        async function handleAiQuickAdd(e) {
+            e.preventDefault();
+            const input = document.getElementById('ai-quick-input');
+            const btn = document.getElementById('ai-parse-btn');
+            const autoSave = document.getElementById('ai-autosave-toggle').checked;
+            const text = input.value.trim();
+            if (!text) return;
+
+            const origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span>Thinking...</span>';
+
+            let parsed = null;
+            let source = 'Smart Parser';
+
+            try {
+                const res = await fetch('/api/calendar/ai-parse', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, selected_date: selectedDateStr }),
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.success && data.parsed) {
+                        parsed = data.parsed;
+                        source = data.source || 'LM Studio';
+                    }
+                }
+            } catch (err) {}
+
+            if (!parsed) parsed = localClientParseEvent(text);
+
+            try {
+                input.value = '';
+                if (!autoSave) {
+                    openEventModal(null, null, parsed);
+                    return;
+                }
+
+                const saveRes = await fetch('/api/calendar/events', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsed),
+                });
+                const saveData = await saveRes.json();
+                if (saveData.success) {
+                    selectedDateStr = parsed.event_date;
+                    const d = parseLocalDate(selectedDateStr);
+                    viewYear = d.getFullYear();
+                    viewMonth = d.getMonth();
+                    await loadEvents();
+
+                    const banner = document.getElementById('ai-toast-banner');
+                    document.getElementById('ai-toast-source').textContent = source;
+                    const prettyDate = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                    const timePart = parsed.start_time ? ` at ${parsed.start_time}` : '';
+                    const sharePart = parsed.visibility === 'custom' && parsed.shared_with ? ` · Shared with ${parsed.shared_with}` : '';
+                    document.getElementById('ai-toast-message').textContent =
+                        `Scheduled "${parsed.title}" for ${prettyDate}${timePart}${sharePart}`;
+
+                    document.getElementById('ai-toast-edit-btn').onclick = () => openEventModal(saveData.id);
+                    document.getElementById('ai-toast-undo-btn').onclick = () => deleteEventById(saveData.id, true);
+                    banner.classList.remove('hidden');
+                } else if (saveData.safety_blocked) {
+                    showGlobalSafetyBlock(saveData.error);
+                }
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+
+        function openCalendarsModal() {
+            const container = document.getElementById('calendar-layers-list');
+            container.innerHTML = CALENDAR_LAYERS.map(layer => {
+                const checked = Boolean(enabledLayers[layer.id]);
+                return `
+                    <label class="glass-subcard rounded-2xl p-3.5 flex items-start justify-between gap-3 cursor-pointer">
+                        <div class="space-y-0.5">
+                            <div class="flex items-center gap-2">
+                                <span class="w-2.5 h-2.5 rounded-full dot-${layer.badge}"></span>
+                                <span class="text-sm font-bold">${escapeHtml(layer.name)}</span>
+                            </div>
+                            <p class="text-xs text-[var(--text-subtle)] pl-4">${escapeHtml(layer.desc)}</p>
+                        </div>
+                        <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleLayer('${layer.id}', this.checked)" class="mt-1 w-4 h-4 accent-sky-500 rounded cursor-pointer">
+                    </label>
+                `;
+            }).join('');
+            document.getElementById('calendars-modal').classList.remove('hidden');
+        }
+
+        function closeCalendarsModal() {
+            document.getElementById('calendars-modal').classList.add('hidden');
+        }
+
+        function toggleLayer(id, state) {
+            enabledLayers[id] = state;
+            saveEnabledLayers();
+            renderAll();
+        }
+
+        function toggleAllLayers(state) {
+            CALENDAR_LAYERS.forEach(l => { enabledLayers[l.id] = state; });
+            saveEnabledLayers();
+            openCalendarsModal();
+            renderAll();
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeEventModal();
+                closeCalendarsModal();
+                closeSafetyModal();
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const todayLabel = document.getElementById('header-today-label');
+            if (todayLabel) {
+                todayLabel.textContent = new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric',
+                });
+            }
+
+            updateActiveLayersBadge();
+            renderAll();
+
+            fetch('/api/auth/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        currentUser = data.username || 'Member';
+                        currentRole = data.role || 'child';
+                        document.getElementById('user-display-name').textContent = currentUser;
+                        document.getElementById('user-initial').textContent = currentUser.charAt(0).toUpperCase();
+                        loadFamilyMembers();
+                        loadSafetySettings();
+                        loadEvents();
+                    } else {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(() => {
+                    loadFamilyMembers();
+                    loadSafetySettings();
+                    loadEvents();
+                });
+        });
+    </script>
+
+</body>
+</html>
