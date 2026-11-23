@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HomeNest — Weather</title>
+
+    <script>
+        (function () {
+            try {
+                var t = localStorage.getItem('theme');
+                if (t === 'dark' || (!t && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                }
+            } catch (e) {}
+        })();
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-base: #e9eef5;
+            --glass-bg: rgba(255, 255, 255, 0.72);
+            --glass-card: rgba(255, 255, 255, 0.56);
+            --glass-hover: rgba(255, 255, 255, 0.84);
+            --glass-border: rgba(15, 23, 42, 0.10);
+            --glass-specular: rgba(255, 255, 255, 0.92);
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-subtle: #64748b;
+            --accent: #0ea5e9;
+            --accent-soft: rgba(14, 165, 233, 0.16);
+            --orb-1: rgba(56, 189, 248, 0.34);
+            --orb-2: rgba(99, 102, 241, 0.24);
+            --orb-3: rgba(245, 158, 11, 0.22);
+        }
+
+        html.dark {
+            color-scheme: dark;
+            --bg-base: #070b14;
+            --glass-bg: rgba(15, 23, 42, 0.68);
+            --glass-card: rgba(30, 41, 59, 0.48);
+            --glass-hover: rgba(30, 41, 59, 0.74);
+            --glass-border: rgba(255, 255, 255, 0.10);
+            --glass-specular: rgba(255, 255, 255, 0.16);
+            --text-main: #f1f5f9;
+            --text-muted: #cbd5e1;
+            --text-subtle: #94a3b8;
+            --accent: #38bdf8;
+            --accent-soft: rgba(56, 189, 248, 0.18);
+            --orb-1: rgba(14, 165, 233, 0.24);
+            --orb-2: rgba(99, 102, 241, 0.20);
+            --orb-3: rgba(245, 158, 11, 0.14);
+        }
+
+        * {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            box-sizing: border-box;
+        }
+
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        body {
+            background: var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .ambient-orb {
+            position: fixed;
+            border-radius: 9999px;
+            filter: blur(110px);
+            pointer-events: none;
+            z-index: 0;
+            transition: background 0.8s ease;
+        }
+        .orb-1 { width: 540px; height: 540px; top: -150px; left: -120px; background: var(--orb-1); }
+        .orb-2 { width: 560px; height: 560px; bottom: -160px; right: -120px; background: var(--orb-2); }
+        .orb-3 { width: 380px; height: 380px; top: 40%; left: 45%; background: var(--orb-3); }
+
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px) saturate(165%);
+            -webkit-backdrop-filter: blur(24px) saturate(165%);
+            border: 1px solid var(--glass-border);
+            box-shadow:
+                inset 0 1px 0 0 var(--glass-specular),
+                0 20px 50px rgba(2, 6, 23, 0.16);
+        }
+
+        .glass-subcard {
+            background: var(--glass-card);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
+            box-shadow: inset 0 1px 0 0 var(--glass-specular);
+            transition: all 0.16s ease;
+        }
+        .glass-subcard:hover {
+            background: var(--glass-hover);
+        }
+
+        .glass-input {
+            background: var(--glass-card);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-soft);
+        }
+
+        .icon-sun { display: none; }
+        html.dark .icon-sun { display: block; }
+        html.dark .icon-moon { display: none; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: rgba(100, 116, 139, 0.35); border-radius: 999px; }
+    </style>
+</head>
+<body class="p-3 sm:p-5 lg:p-6 min-h-screen flex flex-col">
+
+    <div id="orb-1" class="ambient-orb orb-1"></div>
+    <div id="orb-2" class="ambient-orb orb-2"></div>
+    <div id="orb-3" class="ambient-orb orb-3"></div>
+
+    <div class="relative z-10 w-full max-w-[1440px] mx-auto flex-1 flex flex-col gap-4">
+
+        <!-- TOP BAR -->
+        <header class="relative z-30 glass-panel rounded-3xl px-4 py-3.5 sm:px-6 sm:py-4 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+            <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-2xl flex items-center justify-center bg-sky-500/15 border border-sky-500/30 text-sky-500 flex-shrink-0">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">HomeNest Weather</h1>
+                        <span id="detect-source-badge" class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500 border border-sky-500/30 font-semibold">Detecting...</span>
+                    </div>
+                    <p id="header-date-label" class="text-xs text-[var(--text-subtle)] mt-0.5">Loading local weather...</p>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+                <!-- City Search -->
+                <div class="relative">
+                    <svg class="w-3.5 h-3.5 text-[var(--text-subtle)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input id="city-search-input" type="text" oninput="handleCitySearchInput()" placeholder="Search any city..." class="glass-input rounded-2xl pl-8 pr-3 py-2 text-xs w-44 sm:w-56" autocomplete="off">
+                    <div id="city-search-dropdown" class="hidden absolute left-0 sm:left-auto sm:right-0 min-w-[280px] mt-1.5 rounded-2xl p-1.5 z-50 space-y-1 max-h-64 overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-[var(--glass-border)] shadow-2xl"></div>
+                </div>
+
+                <!-- Weather AI Assistant Trigger -->
+                <button onclick="openWeatherAiDrawer()" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-indigo-500/40 bg-gradient-to-r from-sky-500/15 to-indigo-500/15 text-sky-500 dark:text-sky-300 hover:border-sky-400 transition-all" title="Ask Weather AI Assistant">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"></path>
+                    </svg>
+                    <span>Weather AI</span>
+                </button>
+
+                <!-- Auto-Detect Location Button -->
+                <button onclick="autoDetectLocation(true)" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-sky-500/40 text-sky-500 hover:bg-sky-500/10 transition-all" title="Detect High-Precision Location">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+                    </svg>
+                    <span>Locate Me</span>
+                </button>
+
+                <!-- Unit Toggle °C / °F -->
+                <button onclick="toggleTempUnit()" id="unit-toggle-btn" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-mono font-bold hover:border-sky-500/50 transition-all" title="Switch °C / °F">
+                    °C
+                </button>
+
+                <!-- Hub Back Button -->
+                <a href="/" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-semibold flex items-center gap-1.5 hover:border-sky-500/50 transition-all">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                    </svg>
+                    <span>Hub</span>
+                </a>
+
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="glass-subcard w-9 h-9 rounded-2xl flex items-center justify-center hover:border-sky-500/50 transition-all" title="Toggle Theme">
+                    <svg class="w-4 h-4 icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    <svg class="w-4 h-4 icon-sun text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+
+                <!-- User Chip -->
+                <div class="glass-subcard pl-2 pr-3 py-1.5 rounded-2xl flex items-center gap-2 text-xs">
+                    <div class="w-6 h-6 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-500 text-white font-bold text-[11px] flex items-center justify-center">
+                        <span id="user-initial">R</span>
+                    </div>
+                    <span id="user-display-name" class="font-semibold hidden sm:inline">Member</span>
+                    <button onclick="signOut()" class="text-[var(--text-subtle)] hover:text-rose-500 transition-colors ml-0.5" title="Sign Out">
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- SAVED LOCATIONS BAR -->
+        <div class="relative z-10 flex flex-wrap items-center gap-2 px-1">
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)] mr-1">Saved Places:</span>
+            <div id="saved-places-bar" class="flex flex-wrap items-center gap-2"></div>
+            <button onclick="pinCurrentPlace()" id="pin-place-btn" class="glass-subcard px-3 py-1 rounded-full text-[11px] font-bold text-sky-500 hover:bg-sky-500/10 transition-all">
+                + Save Current City
+            </button>
+            <button onclick="setAsHomeBase()" id="set-home-btn" class="glass-subcard px-3 py-1 rounded-full text-[11px] font-bold text-emerald-500 border-emerald-500/35 hover:bg-emerald-500/10 transition-all" title="Use this city as default auto-locate base on your home Wi-Fi">
+                Set as Home
+            </button>
+        </div>
+
+        <!-- HERO CURRENT WEATHER + AI BRIEFING -->
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+
+            <!-- Current Hero Card -->
+            <section class="glass-panel rounded-3xl p-6 sm:p-7 flex flex-col justify-between gap-5">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="weather-city-name" class="text-2xl sm:text-3xl font-extrabold tracking-tight">Detecting Location...</h2>
+                        </div>
+                        <p id="weather-coords-meta" class="text-xs font-mono text-[var(--text-subtle)] mt-1">--</p>
+                        <div class="flex items-baseline gap-4 mt-4">
+                            <span id="current-temp" class="text-5xl sm:text-6xl font-extrabold tracking-tight">--°</span>
+                            <div>
+                                <div id="current-condition" class="text-base sm:text-lg font-bold">--</div>
+                                <div id="current-feels-hl" class="text-xs text-[var(--text-muted)] mt-0.5">Feels like --° · H: --° L: --°</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="current-weather-icon" class="w-24 h-24 rounded-3xl glass-subcard flex items-center justify-center text-sky-400 self-start sm:self-center flex-shrink-0">
+                        <svg class="w-12 h-12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="4"></circle>
+                            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+                        </svg>
+                    </div>
+                </div>
+
+                <!-- AI Outfit & Activity Briefing -->
+                <div class="glass-subcard rounded-2xl p-4 border-sky-500/30 bg-sky-500/5 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-sky-500 flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"></path>
+                            </svg>
+                            Daily Briefing
+                        </span>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openWeatherAiDrawer()" class="text-[10px] font-bold text-sky-500 hover:underline">Ask AI →</button>
+                            <span id="ai-brief-source" class="text-[10px] font-mono text-[var(--text-subtle)]">Smart Forecast</span>
+                        </div>
+                    </div>
+                    <p id="ai-brief-text" class="text-xs sm:text-sm text-[var(--text-main)] leading-relaxed">Fetching local weather conditions...</p>
+                </div>
+            </section>
+
+            <!-- 6-Card Atmospheric Metrics Grid -->
+            <section class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Wind &amp; Gusts</span>
+                    <div id="metric-wind" class="text-xl font-extrabold font-mono mt-2">--</div>
+                    <span id="metric-wind-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Gusts --</span>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Humidity</span>
+                    <div id="metric-humidity" class="text-xl font-extrabold font-mono mt-2">--%</div>
+                    <span id="metric-cloud-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Cloud cover --%</span>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Air Quality (US)</span>
+                    <div id="metric-aqi" class="text-xl font-extrabold font-mono mt-2">--</div>
+                    <span id="metric-aqi-sub" class="text-[11px] text-[var(--text-muted)] mt-1">PM2.5 --</span>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">UV Index Max</span>
+                    <div id="metric-uv" class="text-xl font-extrabold font-mono mt-2">--</div>
+                    <span id="metric-uv-sub" class="text-[11px] text-[var(--text-muted)] mt-1">--</span>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Pressure</span>
+                    <div id="metric-pressure" class="text-xl font-extrabold font-mono mt-2">--</div>
+                    <span id="metric-precip-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Precip -- mm</span>
+                </div>
+
+                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Sun Cycle</span>
+                    <div id="metric-sunrise" class="text-sm font-extrabold font-mono mt-2">↑ --:--</div>
+                    <span id="metric-sunset" class="text-xs font-mono text-[var(--text-muted)] mt-1">↓ --:--</span>
+                </div>
+            </section>
+        </div>
+
+        <!-- HOURLY FORECAST STRIP -->
+        <section class="relative z-10 glass-panel rounded-3xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-extrabold uppercase tracking-wider text-[var(--text-muted)]">Next 24 Hours</h3>
+                <span class="text-[11px] text-[var(--text-subtle)]">Hourly temperature &amp; precipitation chance</span>
+            </div>
+            <div id="hourly-strip" class="flex items-stretch gap-2.5 overflow-x-auto pb-2"></div>
+        </section>
+
+        <!-- 7-DAY FORECAST -->
+        <section class="relative z-10 glass-panel rounded-3xl p-5 sm:p-6 space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-extrabold uppercase tracking-wider text-[var(--text-muted)]">7-Day Outlook</h3>
+                <span class="text-[11px] text-[var(--text-subtle)]">Daily highs, lows &amp; precipitation</span>
+            </div>
+            <div id="daily-list" class="space-y-2"></div>
+        </section>
+
+    </div>
+
+    <!-- WEATHER AI ASSISTANT SLIDE-OVER DRAWER -->
+    <div id="weather-ai-backdrop" onclick="closeWeatherAiDrawer()" class="hidden fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm transition-opacity"></div>
+    <aside id="weather-ai-drawer" class="hidden fixed top-3 right-3 bottom-3 w-[calc(100vw-24px)] max-w-[440px] z-50 rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl flex flex-col overflow-hidden">
+        <!-- Drawer Header -->
+        <div class="px-5 py-4 border-b border-[var(--glass-border)] flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2.5 min-w-0">
+                <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"></path>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h2 class="text-sm font-extrabold tracking-tight truncate">Weather AI Assistant</h2>
+                    <p id="ai-drawer-city-label" class="text-[11px] text-[var(--text-subtle)] truncate">Ready to summarize forecast</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1.5 flex-shrink-0">
+                <button onclick="resetWeatherAiChat(true)" class="glass-subcard px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-[var(--text-muted)] hover:text-sky-500 transition-colors" title="Summarize & Reset">
+                    Summarize
+                </button>
+                <button onclick="closeWeatherAiDrawer()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-rose-500 transition-colors" title="Close">
+                    ×
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Question Chips -->
+        <div class="px-4 py-2.5 border-b border-[var(--glass-border)] flex flex-wrap gap-1.5 bg-sky-500/5">
+            <button type="button" onclick="askQuickWeatherQuestion('Summarize today and the 7-day forecast.')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">Summarize forecast</button>
+            <button type="button" onclick="askQuickWeatherQuestion('What should I wear today?')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">What to wear?</button>
+            <button type="button" onclick="askQuickWeatherQuestion('Will it rain or snow soon?')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">Rain or snow?</button>
+            <button type="button" onclick="askQuickWeatherQuestion('How are wind, air quality, and UV today?')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">Wind &amp; AQI</button>
+        </div>
+
+        <!-- Chat Messages -->
+        <div id="weather-ai-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+
+        <!-- Chat Input Form -->
+        <form onsubmit="submitWeatherAiForm(event)" class="p-3.5 border-t border-[var(--glass-border)] flex items-center gap-2">
+            <input id="weather-ai-input" type="text" placeholder="Ask about temperature, rain, weekend..." class="glass-input flex-1 rounded-2xl px-3.5 py-2.5 text-xs" autocomplete="off">
+            <button id="weather-ai-send-btn" type="submit" class="px-4 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors flex-shrink-0">
+                Ask
+            </button>
+        </form>
+    </aside>
+
+    <script>
+        let useFahrenheit = localStorage.getItem('homenest_weather_unit') === 'F';
+        let currentPlace = null;
+        let lastWeatherPayload = null;
+        let searchTimer = null;
+        let lastSearchResults = [];
+        let aiChatHistory = [];
+        let aiSummarizedPlaceKey = '';
+        let aiBusy = false;
+
+        const DEFAULT_SAVED_PLACES = [
+            { label: 'Candiac, QC', lat: 45.3834, lon: -73.5166 },
+            { label: 'Montreal, QC', lat: 45.5017, lon: -73.5673 },
+            { label: 'Vancouver, BC', lat: 49.2827, lon: -123.1207 },
+            { label: 'Beijing, China', lat: 39.9042, lon: 116.4074 },
+        ];
+
+        function escapeHtml(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function toggleTheme() {
+            const dark = !document.documentElement.classList.contains('dark');
+            document.documentElement.classList.toggle('dark', dark);
+            try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+        }
+
+        function signOut() {
+            fetch('/api/logout', { method: 'POST' }).then(() => { window.location.href = '/'; });
+        }
+
+        function convertTempNum(cVal) {
+            if (cVal === null || cVal === undefined || isNaN(cVal)) return null;
+            return Math.round(useFahrenheit ? (cVal * 9 / 5) + 32 : cVal);
+        }
+
+        function fmtTemp(cVal) {
+            const n = convertTempNum(cVal);
+            return n === null ? '--°' : `${n}°`;
+        }
+
+        function toggleTempUnit() {
+            useFahrenheit = !useFahrenheit;
+            localStorage.setItem('homenest_weather_unit', useFahrenheit ? 'F' : 'C');
+            document.getElementById('unit-toggle-btn').textContent = useFahrenheit ? '°F' : '°C';
+            if (lastWeatherPayload) renderWeather(lastWeatherPayload);
+        }
+
+        function getSavedPlaces() {
+            try {
+                const raw = JSON.parse(localStorage.getItem('homenest_saved_places') || 'null');
+                if (Array.isArray(raw) && raw.length) return raw;
+            } catch (e) {}
+            return DEFAULT_SAVED_PLACES;
+        }
+
+        function savePlacesList(list) {
+            try { localStorage.setItem('homenest_saved_places', JSON.stringify(list.slice(0, 10))); } catch (e) {}
+            renderSavedPlaces();
+        }
+
+        function renderSavedPlaces() {
+            const list = getSavedPlaces();
+            const bar = document.getElementById('saved-places-bar');
+            bar.innerHTML = list.map((p, idx) => {
+                const active = currentPlace && Math.abs(currentPlace.lat - p.lat) < 0.05 && Math.abs(currentPlace.lon - p.lon) < 0.05;
+                return `
+                    <div class="inline-flex items-center rounded-full ${active ? 'bg-sky-500 text-white' : 'glass-subcard'} text-xs font-semibold overflow-hidden">
+                        <button type="button" onclick="selectSavedPlace(${idx})" class="px-3 py-1 hover:opacity-90">${escapeHtml(p.label)}</button>
+                        ${idx >= 1 ? `<button type="button" onclick="removeSavedPlace(${idx})" class="pr-2.5 pl-0.5 opacity-65 hover:opacity-100" title="Remove">×</button>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectSavedPlace(idx) {
+            const place = getSavedPlaces()[idx];
+            if (place) selectPlace(place.lat, place.lon, place.label, 'Saved Place');
+        }
+
+        function pinCurrentPlace() {
+            if (!currentPlace) return;
+            const list = getSavedPlaces();
+            const exists = list.some(p => Math.abs(p.lat - currentPlace.lat) < 0.05 && Math.abs(p.lon - currentPlace.lon) < 0.05);
+            if (!exists) {
+                list.unshift({ label: currentPlace.label.split(',').slice(0, 2).join(','), lat: currentPlace.lat, lon: currentPlace.lon });
+                savePlacesList(list);
+            }
+        }
+
+        async function setAsHomeBase() {
+            if (!currentPlace) return;
+            const btn = document.getElementById('set-home-btn');
+            const orig = btn.textContent;
+            btn.textContent = 'Saving...';
+            try {
+                const res = await fetch('/api/weather/home', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        label: currentPlace.label,
+                        lat: currentPlace.lat,
+                        lon: currentPlace.lon,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('detect-source-badge').textContent = 'Home Wi-Fi Base';
+                    btn.textContent = 'Home Saved ✓';
+                    setTimeout(() => { btn.textContent = orig; }, 2000);
+                } else {
+                    btn.textContent = orig;
+                }
+            } catch (e) {
+                btn.textContent = orig;
+            }
+        }
+
+        function removeSavedPlace(idx) {
+            const list = getSavedPlaces();
+            list.splice(idx, 1);
+            savePlacesList(list);
+        }
+
+        function describeWmoCode(code, isDay = 1) {
+            const map = {
+                0: ['Clear Sky', 'sun'],
+                1: ['Mainly Clear', 'sun'],
+                2: ['Partly Cloudy', 'partly'],
+                3: ['Overcast', 'cloud'],
+                45: ['Foggy', 'fog'],
+                48: ['Depositing Rime Fog', 'fog'],
+                51: ['Light Drizzle', 'rain'],
+                53: ['Moderate Drizzle', 'rain'],
+                55: ['Dense Drizzle', 'rain'],
+                56: ['Freezing Drizzle', 'sleet'],
+                57: ['Dense Freezing Drizzle', 'sleet'],
+                61: ['Light Rain', 'rain'],
+                63: ['Moderate Rain', 'rain'],
+                65: ['Heavy Rain', 'rain'],
+                66: ['Freezing Rain', 'sleet'],
+                67: ['Heavy Freezing Rain', 'sleet'],
+                71: ['Light Snow', 'snow'],
+                73: ['Moderate Snow', 'snow'],
+                75: ['Heavy Snow', 'snow'],
+                77: ['Snow Grains', 'snow'],
+                80: ['Light Rain Showers', 'rain'],
+                81: ['Rain Showers', 'rain'],
+                82: ['Heavy Rain Showers', 'rain'],
+                85: ['Light Snow Showers', 'snow'],
+                86: ['Heavy Snow Showers', 'snow'],
+                95: ['Thunderstorm', 'storm'],
+                96: ['Thunderstorm & Hail', 'storm'],
+                99: ['Severe Thunderstorm', 'storm'],
+            };
+            const entry = map[code] || ['Cloudy', 'cloud'];
+            return { text: entry[0], icon: (entry[1] === 'sun' && !isDay) ? 'moon' : entry[1] };
+        }
+
+        function getWeatherSvg(kind, sizeClass = 'w-6 h-6') {
+            const icons = {
+                sun: `<svg class="${sizeClass} text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg>`,
+                moon: `<svg class="${sizeClass} text-indigo-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>`,
+                partly: `<svg class="${sizeClass} text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41M15.947 12.65a4 4 0 0 0-5.925-4.128"></path><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z"></path></svg>`,
+                cloud: `<svg class="${sizeClass} text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>`,
+                fog: `<svg class="${sizeClass} text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h16M4 18h12M6 10h12"></path></svg>`,
+                rain: `<svg class="${sizeClass} text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M16 14v6M8 14v6M12 16v6"></path></svg>`,
+                sleet: `<svg class="${sizeClass} text-cyan-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="m8 15-1 4M12 15l-1 4M16 15l-1 4"></path></svg>`,
+                snow: `<svg class="${sizeClass} text-cyan-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 17.58A5 5 0 0 0 18 8h-1.26A8 8 0 1 0 4 16.25"></path><line x1="8" y1="16" x2="8.01" y2="16"></line><line x1="8" y1="20" x2="8.01" y2="20"></line><line x1="12" y1="18" x2="12.01" y2="18"></line><line x1="12" y1="22" x2="12.01" y2="22"></line><line x1="16" y1="16" x2="16.01" y2="16"></line><line x1="16" y1="20" x2="16.01" y2="20"></line></svg>`,
+                storm: `<svg class="${sizeClass} text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973"></path><polyline points="13 12 9 18 15 18 11 23"></polyline></svg>`,
+            };
+            return icons[kind] || icons.cloud;
+        }
+
+        function windDirLabel(deg) {
+            if (deg === null || deg === undefined) return '';
+            const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            return dirs[Math.round(deg / 45) % 8];
+        }
+
+        async function autoDetectLocation(forceFresh = false) {
+            const badge = document.getElementById('detect-source-badge');
+            badge.textContent = 'Locating...';
+
+            const fallbackToServer = async () => {
+                const res = await fetch(`/api/weather/detect-location${forceFresh ? '?force=1' : ''}`);
+                if (res.status === 401) { window.location.href = '/'; return; }
+                const loc = await res.json();
+                if (loc.success) {
+                    await selectPlace(loc.lat, loc.lon, loc.label, loc.source);
+                }
+            };
+
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    async (pos) => {
+                        const res = await fetch(`/api/weather/detect-location?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+                        const loc = await res.json();
+                        if (loc.success) {
+                            await selectPlace(loc.lat, loc.lon, loc.label, loc.source);
+                        } else {
+                            await fallbackToServer();
+                        }
+                    },
+                    async () => {
+                        await fallbackToServer();
+                    },
+                    { enableHighAccuracy: true, timeout: 6000, maximumAge: forceFresh ? 0 : 60000 }
+                );
+            } else {
+                await fallbackToServer();
+            }
+        }
+
+        async function selectPlace(lat, lon, label, sourceTag = 'Selected') {
+            currentPlace = { lat: Number(lat), lon: Number(lon), label };
+            document.getElementById('detect-source-badge').textContent = sourceTag;
+            document.getElementById('weather-city-name').textContent = label;
+            document.getElementById('weather-coords-meta').textContent = `${currentPlace.lat.toFixed(4)}° N, ${currentPlace.lon.toFixed(4)}° E`;
+            document.getElementById('current-condition').textContent = 'Loading forecast...';
+            document.getElementById('ai-drawer-city-label').textContent = label;
+            renderSavedPlaces();
+
+            try {
+                const url = `/api/weather/forecast?lat=${encodeURIComponent(currentPlace.lat)}&lon=${encodeURIComponent(currentPlace.lon)}&label=${encodeURIComponent(label)}`;
+                const res = await fetch(url);
+                if (res.status === 401) { window.location.href = '/'; return; }
+                const data = await res.json();
+                if (data.success) {
+                    lastWeatherPayload = data;
+                    renderWeather(data);
+                    fetchAiBrief(data);
+                    if (!document.getElementById('weather-ai-drawer').classList.contains('hidden')) {
+                        resetWeatherAiChat(true);
+                    }
+                } else {
+                    document.getElementById('current-condition').textContent = data.error || 'Forecast unavailable';
+                }
+            } catch (err) {
+                document.getElementById('current-condition').textContent = 'Network error loading forecast';
+            }
+        }
+
+        function renderWeather(data) {
+            const cur = data.current || {};
+            const daily = data.daily || {};
+            const hourly = data.hourly || {};
+            const aqi = data.air_quality || {};
+
+            const info = describeWmoCode(cur.weather_code, cur.is_day);
+            const hi0 = (daily.temperature_2m_max || [])[0];
+            const lo0 = (daily.temperature_2m_min || [])[0];
+
+            document.getElementById('current-temp').textContent = fmtTemp(cur.temperature_2m);
+            document.getElementById('current-condition').textContent = info.text;
+            document.getElementById('current-feels-hl').textContent = `Feels like ${fmtTemp(cur.apparent_temperature)} · H: ${fmtTemp(hi0)}  L: ${fmtTemp(lo0)}`;
+            document.getElementById('current-weather-icon').innerHTML = getWeatherSvg(info.icon, 'w-14 h-14');
+            document.getElementById('weather-coords-meta').textContent = `${currentPlace.lat.toFixed(4)}, ${currentPlace.lon.toFixed(4)} · Timezone: ${data.timezone || 'Auto'}`;
+
+            // Metrics
+            document.getElementById('metric-wind').textContent = `${Math.round(cur.wind_speed_10m || 0)} km/h ${windDirLabel(cur.wind_direction_10m)}`;
+            document.getElementById('metric-wind-sub').textContent = `Gusts ${Math.round(cur.wind_gusts_10m || 0)} km/h`;
+
+            document.getElementById('metric-humidity').textContent = `${Math.round(cur.relative_humidity_2m || 0)}%`;
+            document.getElementById('metric-cloud-sub').textContent = `Cloud cover ${Math.round(cur.cloud_cover || 0)}%`;
+
+            const usAqi = aqi.us_aqi;
+            document.getElementById('metric-aqi').textContent = usAqi !== undefined && usAqi !== null ? `${Math.round(usAqi)}` : 'N/A';
+            const aqiLabel = usAqi == null ? 'Unavailable' : usAqi <= 50 ? 'Good' : usAqi <= 100 ? 'Moderate' : 'Unhealthy';
+            document.getElementById('metric-aqi-sub').textContent = `${aqiLabel}${aqi.pm2_5 != null ? ' · PM2.5 ' + aqi.pm2_5.toFixed(1) : ''}`;
+
+            const uvMax = (daily.uv_index_max || [])[0];
+            document.getElementById('metric-uv').textContent = uvMax !== undefined ? uvMax.toFixed(1) : '--';
+            document.getElementById('metric-uv-sub').textContent = uvMax == null ? '--' : uvMax < 3 ? 'Low' : uvMax < 6 ? 'Moderate' : uvMax < 8 ? 'High' : 'Very High';
+
+            document.getElementById('metric-pressure').textContent = cur.pressure_msl ? `${Math.round(cur.pressure_msl)} hPa` : '--';
+            document.getElementById('metric-precip-sub').textContent = `Current precip ${cur.precipitation ?? 0} mm`;
+
+            const sr = ((daily.sunrise || [])[0] || '').split('T')[1] || '--:--';
+            const ss = ((daily.sunset || [])[0] || '').split('T')[1] || '--:--';
+            document.getElementById('metric-sunrise').textContent = `↑ ${sr}`;
+            document.getElementById('metric-sunset').textContent = `↓ ${ss}`;
+
+            // Hourly (next 24 hours starting near current time)
+            const hTimes = hourly.time || [];
+            const curIsoHour = (cur.time || '').slice(0, 13);
+            let startIdx = hTimes.findIndex(t => t.slice(0, 13) >= curIsoHour);
+            if (startIdx < 0) startIdx = 0;
+
+            const strip = document.getElementById('hourly-strip');
+            const sliceEnd = Math.min(startIdx + 24, hTimes.length);
+            let hourlyHtml = '';
+            for (let i = startIdx; i < sliceEnd; i++) {
+                const tStr = i === startIdx ? 'Now' : hTimes[i].slice(11, 16);
+                const hInfo = describeWmoCode(hourly.weather_code[i], hourly.is_day ? hourly.is_day[i] : 1);
+                const pop = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+                hourlyHtml += `
+                    <div class="glass-subcard rounded-2xl px-3.5 py-3 min-w-[78px] flex flex-col items-center justify-between gap-2 text-center ${i === startIdx ? 'border-sky-500/50 bg-sky-500/10' : ''}">
+                        <span class="text-[11px] font-mono font-semibold text-[var(--text-muted)]">${tStr}</span>
+                        ${getWeatherSvg(hInfo.icon, 'w-6 h-6')}
+                        <span class="text-sm font-extrabold font-mono">${fmtTemp(hourly.temperature_2m[i])}</span>
+                        <span class="text-[10px] font-mono ${pop >= 25 ? 'text-sky-400 font-bold' : 'text-[var(--text-subtle)]'}">${pop ? pop + '%' : '—'}</span>
+                    </div>
+                `;
+            }
+            strip.innerHTML = hourlyHtml;
+
+            // 7-Day Forecast
+            const dTimes = daily.time || [];
+            const allMins = daily.temperature_2m_min || [];
+            const allMaxs = daily.temperature_2m_max || [];
+            const weekMin = Math.min(...allMins);
+            const weekMax = Math.max(...allMaxs);
+            const span = Math.max(weekMax - weekMin, 1);
+
+            const dailyList = document.getElementById('daily-list');
+            dailyList.innerHTML = dTimes.map((dStr, idx) => {
+                const [y, m, d] = dStr.split('-').map(Number);
+                const dt = new Date(y, m - 1, d, 12, 0, 0);
+                const dayLabel = idx === 0 ? 'Today' : dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const dInfo = describeWmoCode(daily.weather_code[idx], 1);
+                const pop = (daily.precipitation_probability_max || [])[idx] || 0;
+                const dMin = allMins[idx];
+                const dMax = allMaxs[idx];
+                const leftPct = ((dMin - weekMin) / span) * 100;
+                const widthPct = Math.max(((dMax - dMin) / span) * 100, 8);
+
+                return `
+                    <div class="glass-subcard rounded-2xl px-4 py-3 grid grid-cols-[115px_36px_48px_1fr] sm:grid-cols-[150px_42px_130px_1fr] items-center gap-3">
+                        <span class="text-xs sm:text-sm font-bold">${dayLabel}</span>
+                        <div class="flex justify-center">${getWeatherSvg(dInfo.icon, 'w-5 h-5')}</div>
+                        <div class="text-xs text-[var(--text-muted)] truncate">
+                            <span class="hidden sm:inline">${dInfo.text}</span>
+                            ${pop >= 20 ? `<span class="text-sky-400 font-mono font-bold ml-1">${pop}%</span>` : ''}
+                        </div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="text-xs font-mono text-[var(--text-subtle)] w-9 text-right">${fmtTemp(dMin)}</span>
+                            <div class="flex-1 h-2 rounded-full bg-slate-500/20 relative overflow-hidden">
+                                <div class="absolute top-0 bottom-0 rounded-full bg-gradient-to-r from-sky-400 via-emerald-400 to-amber-400" style="left: ${leftPct}%; width: ${widthPct}%"></div>
+                            </div>
+                            <span class="text-xs font-mono font-bold w-9">${fmtTemp(dMax)}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchAiBrief(data) {
+            const cur = data.current || {};
+            const daily = data.daily || {};
+            const info = describeWmoCode(cur.weather_code, cur.is_day);
+            try {
+                const res = await fetch('/api/weather/ai-brief', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        location: currentPlace ? currentPlace.label : '',
+                        temp: cur.temperature_2m,
+                        feels_like: cur.apparent_temperature,
+                        condition: info.text,
+                        wind: cur.wind_speed_10m,
+                        precip_prob: (daily.precipitation_probability_max || [])[0] || 0,
+                        high: (daily.temperature_2m_max || [])[0],
+                        low: (daily.temperature_2m_min || [])[0],
+                    }),
+                });
+                const briefData = await res.json();
+                if (briefData.success) {
+                    document.getElementById('ai-brief-text').textContent = briefData.brief;
+                    document.getElementById('ai-brief-source').textContent = briefData.source || 'Smart Forecast';
+                }
+            } catch (e) {}
+        }
+
+        /* Weather AI Assistant Drawer */
+        function buildWeatherContextForAi() {
+            const unitSym = useFahrenheit ? '°F' : '°C';
+            if (!lastWeatherPayload) {
+                return { text: 'Forecast is still loading.', structured: {}, unit: unitSym };
+            }
+            const data = lastWeatherPayload;
+            const cur = data.current || {};
+            const daily = data.daily || {};
+            const hourly = data.hourly || {};
+            const aqi = data.air_quality || {};
+            const info = describeWmoCode(cur.weather_code, cur.is_day);
+
+            const sr = ((daily.sunrise || [])[0] || '').split('T')[1] || '--:--';
+            const ss = ((daily.sunset || [])[0] || '').split('T')[1] || '--:--';
+            const uvMax = (daily.uv_index_max || [])[0];
+
+            // Next 24 hours summary (every 3h)
+            const hTimes = hourly.time || [];
+            const curIsoHour = (cur.time || '').slice(0, 13);
+            let startIdx = hTimes.findIndex(t => t.slice(0, 13) >= curIsoHour);
+            if (startIdx < 0) startIdx = 0;
+
+            let maxPop24 = 0;
+            let peakPopTime = 'later today';
+            const hourlyLines = [];
+            for (let i = startIdx; i < Math.min(startIdx + 24, hTimes.length); i++) {
+                const pop = (hourly.precipitation_probability || [])[i] || 0;
+                if (pop > maxPop24) {
+                    maxPop24 = pop;
+                    peakPopTime = hTimes[i].slice(11, 16);
+                }
+                if ((i - startIdx) % 3 === 0) {
+                    const hInfo = describeWmoCode(hourly.weather_code[i], hourly.is_day ? hourly.is_day[i] : 1);
+                    hourlyLines.push(`${hTimes[i].slice(11, 16)}: ${convertTempNum(hourly.temperature_2m[i])}${unitSym}, ${hInfo.text}, precip ${pop}%`);
+                }
+            }
+
+            // 7-day summary
+            const dTimes = daily.time || [];
+            const dailyStructured = [];
+            const dailyLines = dTimes.map((dStr, idx) => {
+                const [y, m, d] = dStr.split('-').map(Number);
+                const dt = new Date(y, m - 1, d, 12, 0, 0);
+                const dayLabel = idx === 0 ? 'Today' : dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const dInfo = describeWmoCode(daily.weather_code[idx], 1);
+                const hi = convertTempNum((daily.temperature_2m_max || [])[idx]);
+                const lo = convertTempNum((daily.temperature_2m_min || [])[idx]);
+                const pop = (daily.precipitation_probability_max || [])[idx] || 0;
+                dailyStructured.push({ day: dayLabel, condition: dInfo.text, high: hi, low: lo, precip_prob: pop });
+                return `${dayLabel}: ${dInfo.text}, High ${hi}${unitSym} / Low ${lo}${unitSym}, Precip ${pop}%`;
+            });
+
+            const curTemp = convertTempNum(cur.temperature_2m);
+            const curFeels = convertTempNum(cur.apparent_temperature);
+            const curWind = Math.round(cur.wind_speed_10m || 0);
+            const curGusts = Math.round(cur.wind_gusts_10m || 0);
+            const curHum = Math.round(cur.relative_humidity_2m || 0);
+            const curAqi = aqi.us_aqi != null ? Math.round(aqi.us_aqi) : null;
+
+            const text = [
+                `Location: ${currentPlace ? currentPlace.label : 'Unknown'} (Timezone: ${data.timezone || 'Auto'})`,
+                `Current: ${curTemp}${unitSym} (Feels like ${curFeels}${unitSym}), ${info.text}, Wind ${curWind} km/h ${windDirLabel(cur.wind_direction_10m)} (gusts ${curGusts} km/h), Humidity ${curHum}%, Pressure ${Math.round(cur.pressure_msl || 0)} hPa, US AQI ${curAqi ?? 'N/A'}, UV Max ${uvMax ?? 'N/A'}, Sunrise ${sr}, Sunset ${ss}`,
+                `Next 24h (3-hour intervals): ${hourlyLines.join(' | ')}`,
+                `7-Day Outlook: ${dailyLines.join(' | ')}`,
+            ].join('\n');
+
+            return {
+                text,
+                unit: unitSym,
+                structured: {
+                    current: {
+                        temp: curTemp,
+                        feels_like: curFeels,
+                        condition: info.text,
+                        wind: curWind,
+                        gusts: curGusts,
+                        humidity: curHum,
+                        aqi: curAqi,
+                        uv_max: uvMax,
+                        sunrise: sr,
+                        sunset: ss,
+                    },
+                    hourly_summary: {
+                        max_pop_24h: maxPop24,
+                        peak_pop_time: peakPopTime,
+                    },
+                    daily: dailyStructured,
+                },
+            };
+        }
+
+        function renderWeatherAiMessages() {
+            const box = document.getElementById('weather-ai-messages');
+            if (!aiChatHistory.length) {
+                box.innerHTML = `<div class="text-xs text-[var(--text-subtle)] text-center py-8">Ask anything about the forecast, clothing, rain chances, or upcoming days.</div>`;
+                return;
+            }
+            box.innerHTML = aiChatHistory.map(m => {
+                if (m.role === 'user') {
+                    return `
+                        <div class="flex justify-end">
+                            <div class="max-w-[85%] rounded-2xl rounded-br-sm px-3.5 py-2.5 bg-sky-500 text-white text-xs leading-relaxed shadow">
+                                ${escapeHtml(m.content)}
+                            </div>
+                        </div>
+                    `;
+                }
+                return `
+                    <div class="flex justify-start">
+                        <div class="max-w-[92%] glass-subcard rounded-2xl rounded-bl-sm px-3.5 py-2.5 text-xs leading-relaxed space-y-1">
+                            <div class="flex items-center justify-between gap-2 text-[10px] font-mono text-sky-500">
+                                <span class="font-bold">WEATHER AI</span>
+                                <span class="text-[var(--text-subtle)]">${escapeHtml(m.source || 'Smart Forecast')}</span>
+                            </div>
+                            <p class="text-[var(--text-main)] whitespace-pre-line">${escapeHtml(m.content)}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            if (aiBusy) {
+                box.innerHTML += `
+                    <div class="flex justify-start">
+                        <div class="glass-subcard rounded-2xl px-3.5 py-2.5 text-xs text-[var(--text-subtle)] animate-pulse">
+                            Analyzing forecast...
+                        </div>
+                    </div>
+                `;
+            }
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function openWeatherAiDrawer() {
+            document.getElementById('weather-ai-backdrop').classList.remove('hidden');
+            document.getElementById('weather-ai-drawer').classList.remove('hidden');
+            const placeKey = currentPlace ? `${currentPlace.label}:${currentPlace.lat}:${currentPlace.lon}` : 'default';
+            document.getElementById('ai-drawer-city-label').textContent = currentPlace ? currentPlace.label : 'Current Forecast';
+
+            if (lastWeatherPayload && aiSummarizedPlaceKey !== placeKey) {
+                aiSummarizedPlaceKey = placeKey;
+                aiChatHistory = [];
+                sendWeatherAiQuestion('Summarize the current weather, next 24 hours, and 7-day outlook.', true);
+            } else {
+                renderWeatherAiMessages();
+            }
+            setTimeout(() => document.getElementById('weather-ai-input').focus(), 50);
+        }
+
+        function closeWeatherAiDrawer() {
+            document.getElementById('weather-ai-backdrop').classList.add('hidden');
+            document.getElementById('weather-ai-drawer').classList.add('hidden');
+        }
+
+        function resetWeatherAiChat(autoSummarize = false) {
+            aiChatHistory = [];
+            renderWeatherAiMessages();
+            if (autoSummarize && lastWeatherPayload) {
+                sendWeatherAiQuestion('Summarize the current weather, next 24 hours, and 7-day outlook.', true);
+            }
+        }
+
+        function askQuickWeatherQuestion(q) {
+            if (aiBusy) return;
+            sendWeatherAiQuestion(q, false);
+        }
+
+        function submitWeatherAiForm(e) {
+            e.preventDefault();
+            if (aiBusy) return;
+            const inp = document.getElementById('weather-ai-input');
+            const q = inp.value.trim();
+            if (!q) return;
+            inp.value = '';
+            sendWeatherAiQuestion(q, false);
+        }
+
+        async function sendWeatherAiQuestion(question, isAutoSummary = false) {
+            if (aiBusy) return;
+            aiBusy = true;
+            if (!isAutoSummary) {
+                aiChatHistory.push({ role: 'user', content: question });
+            }
+            renderWeatherAiMessages();
+
+            const ctx = buildWeatherContextForAi();
+            try {
+                const res = await fetch('/api/weather/ai-chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        location: currentPlace ? currentPlace.label : 'Current Location',
+                        question,
+                        weather_context: ctx.text,
+                        structured: ctx.structured,
+                        unit: ctx.unit,
+                        history: aiChatHistory.slice(-6),
+                    }),
+                });
+                const data = await res.json();
+                aiBusy = false;
+                if (data.success && data.reply) {
+                    aiChatHistory.push({ role: 'assistant', content: data.reply, source: data.source || 'Smart Forecast' });
+                } else {
+                    aiChatHistory.push({ role: 'assistant', content: data.error || 'Could not generate a response right now.', source: 'System' });
+                }
+            } catch (err) {
+                aiBusy = false;
+                aiChatHistory.push({ role: 'assistant', content: 'Network error reaching Weather AI.', source: 'System' });
+            }
+            renderWeatherAiMessages();
+        }
+
+        /* City Search Dropdown */
+        function handleCitySearchInput() {
+            clearTimeout(searchTimer);
+            const q = document.getElementById('city-search-input').value.trim();
+            const drop = document.getElementById('city-search-dropdown');
+            if (q.length < 2) {
+                drop.classList.add('hidden');
+                return;
+            }
+            searchTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/api/weather/search?q=${encodeURIComponent(q)}`);
+                    const data = await res.json();
+                    if (!data.success || !data.results.length) {
+                        lastSearchResults = [];
+                        drop.innerHTML = '<div class="px-3 py-2 text-xs text-[var(--text-subtle)]">No matching cities</div>';
+                        drop.classList.remove('hidden');
+                        return;
+                    }
+                    lastSearchResults = data.results;
+                    drop.innerHTML = data.results.map((item, idx) => `
+                        <button type="button" onclick="pickSearchCity(${idx})"
+                            class="w-full text-left px-3 py-2 rounded-xl text-xs hover:bg-sky-500/15 transition-colors flex items-center justify-between gap-2">
+                            <span class="font-semibold truncate">${escapeHtml(item.label)}</span>
+                            <span class="font-mono text-[10px] text-[var(--text-subtle)] flex-shrink-0">${Number(item.lat).toFixed(2)}, ${Number(item.lon).toFixed(2)}</span>
+                        </button>
+                    `).join('');
+                    drop.classList.remove('hidden');
+                } catch (e) {}
+            }, 260);
+        }
+
+        function pickSearchCity(idx) {
+            const item = lastSearchResults[idx];
+            document.getElementById('city-search-dropdown').classList.add('hidden');
+            document.getElementById('city-search-input').value = '';
+            if (!item) return;
+            selectPlace(item.lat, item.lon, item.label, 'Searched City');
+        }
+
+        document.addEventListener('click', (e) => {
+            const drop = document.getElementById('city-search-dropdown');
+            const inp = document.getElementById('city-search-input');
+            if (drop && !drop.contains(e.target) && e.target !== inp) {
+                drop.classList.add('hidden');
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeWeatherAiDrawer();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('header-date-label').textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+            });
+            document.getElementById('unit-toggle-btn').textContent = useFahrenheit ? '°F' : '°C';
+            renderSavedPlaces();
+
+            fetch('/api/auth/status')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        const name = data.username || 'Member';
+                        document.getElementById('user-display-name').textContent = name;
+                        document.getElementById('user-initial').textContent = name.charAt(0).toUpperCase();
+                        autoDetectLocation();
+                    } else {
+                        window.location.href = '/';
+                    }
+                })
+                .catch(() => autoDetectLocation());
+        });
+    </script>
+</body>
+</html>

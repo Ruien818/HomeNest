@@ -376,6 +376,10 @@ def calendar_page():
 def reminder_page():
     return render_template("reminders.html")
 
+@app.route("/weather")
+def weather_page():
+    return render_template("weather.html")
+
 
 # --- DATABASE SETUP & AUTO-MIGRATION ---
 def get_db():
@@ -3729,6 +3733,649 @@ def api_clear_completed_reminders():
     conn.commit()
     conn.close()
     return jsonify({"success": True, "deleted": deleted})
+
+
+def _http_get_json(url, timeout=8):
+    import json
+    import ssl
+    import urllib.request
+
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "HomeNest-Weather/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as first_err:
+        if url.startswith("https://"):
+            try:
+                ctx = ssl._create_unverified_context()
+                with urllib.request.urlopen(req, timeout=timeout, context=ctx) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+            except Exception as second_err:
+                print(f"[HomeNest Weather] Failed {url} -> {first_err} | retry -> {second_err}")
+                raise
+        print(f"[HomeNest Weather] Failed {url} -> {first_err}")
+        raise
+
+
+_MAC_LOC_CACHE = {"ts": 0.0, "lat": None, "lon": None}
+
+
+def _ensure_weather_table(conn):
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS weather_home (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            label TEXT NOT NULL,
+            lat REAL NOT NULL,
+            lon REAL NOT NULL,
+            updated_by TEXT DEFAULT '',
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.commit()
+
+
+def _reverse_geocode_city(lat, lon):
+    import urllib.parse
+
+    # 1. OpenStreetMap Nominatim (preserves exact towns/suburbs like Candiac)
+    try:
+        nom_url = "https://nominatim.openstreetmap.org/reverse?" + urllib.parse.urlencode(
+            {
+                "format": "jsonv2",
+                "lat": round(lat, 5),
+                "lon": round(lon, 5),
+                "zoom": 14,
+                "addressdetails": 1,
+                "accept-language": "en",
+            }
+        )
+        nom = _http_get_json(nom_url, timeout=5)
+        addr = nom.get("address") or {}
+        city = (
+            addr.get("city")
+            or addr.get("town")
+            or addr.get("village")
+            or addr.get("municipality")
+            or addr.get("suburb")
+            or ""
+        )
+        region = addr.get("state") or addr.get("province") or ""
+        country = addr.get("country") or ""
+        if city:
+            label = ", ".join(p for p in (city, region, country) if p)
+            return city, region, country, label
+    except Exception:
+        pass
+
+    # 2. BigDataCloud fallback
+    try:
+        rev_url = "https://api.bigdatacloud.net/data/reverse-geocode-client?" + urllib.parse.urlencode(
+            {"latitude": round(lat, 4), "longitude": round(lon, 4), "localityLanguage": "en"}
+        )
+        rev = _http_get_json(rev_url, timeout=5)
+        city = rev.get("locality") or rev.get("city") or rev.get("principalSubdivision") or "Current Location"
+        region = rev.get("principalSubdivision") or ""
+        country = rev.get("countryName") or ""
+        label = ", ".join(p for p in (city, region, country) if p)
+        return city, region, country, label
+    except Exception:
+        return "Current Location", "", "", f"{lat:.3f}, {lon:.3f}"
+
+
+def _detect_macos_corelocation():
+    import subprocess
+    import sys
+    import time
+
+    if sys.platform != "darwin":
+        return None
+
+    now = time.time()
+    if _MAC_LOC_CACHE["lat"] is not None and (now - _MAC_LOC_CACHE["ts"]) < 1800:
+        return _MAC_LOC_CACHE["lat"], _MAC_LOC_CACHE["lon"]
+
+    swift_code = """
+import CoreLocation
+import Foundation
+
+class LocDelegate: NSObject, CLLocationManagerDelegate {
+    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        if let loc = locations.last, loc.horizontalAccuracy >= 0 {
+            print("\\(loc.coordinate.latitude),\\(loc.coordinate.longitude)")
+            fflush(stdout)
+            exit(0)
+        }
+    }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        exit(1)
+    }
+}
+
+let mgr = CLLocationManager()
+let del = LocDelegate()
+mgr.delegate = del
+mgr.desiredAccuracy = kCLLocationAccuracyBest
+mgr.startUpdatingLocation()
+RunLoop.main.run(until: Date(timeIntervalSinceNow: 3.5))
+exit(1)
+"""
+    try:
+        res = subprocess.run(
+            ["swift", "-e", swift_code],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if res.returncode == 0 and "," in res.stdout:
+            lat_s, lon_s = res.stdout.strip().splitlines()[-1].split(",", 1)
+            lat_v, lon_v = round(float(lat_s), 4), round(float(lon_s), 4)
+            _MAC_LOC_CACHE.update({"ts": now, "lat": lat_v, "lon": lon_v})
+            return lat_v, lon_v
+    except Exception:
+        pass
+    return None
+
+
+def _is_lan_client(remote_addr):
+    addr = (remote_addr or "").strip()
+    return (
+        addr.startswith("192.168.")
+        or addr.startswith("10.")
+        or addr.startswith("127.")
+        or addr == "::1"
+        or any(addr.startswith(f"172.{i}.") for i in range(16, 32))
+    )
+
+
+@app.route("/api/weather/home", methods=["POST"])
+def api_weather_set_home():
+    if not session.get("user_id"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    label = (data.get("label") or "").strip()
+    lat = data.get("lat")
+    lon = data.get("lon")
+    if not label or lat is None or lon is None:
+        return jsonify({"success": False, "error": "Missing location details"}), 400
+
+    conn = get_db()
+    _ensure_weather_table(conn)
+    conn.execute(
+        """
+        INSERT INTO weather_home (id, label, lat, lon, updated_by, updated_at)
+        VALUES (1, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET
+            label = excluded.label,
+            lat = excluded.lat,
+            lon = excluded.lon,
+            updated_by = excluded.updated_by,
+            updated_at = CURRENT_TIMESTAMP
+        """,
+        (label, round(float(lat), 4), round(float(lon), 4), session.get("username") or ""),
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "label": label})
+
+
+@app.route("/api/weather/detect-location", methods=["GET"])
+def api_weather_detect_location():
+    if not session.get("user_id"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+    force_live = request.args.get("force") == "1"
+
+    # 1. Exact browser GPS / Wi-Fi coordinates (when available)
+    if lat is not None and lon is not None:
+        city, region, country, label = _reverse_geocode_city(lat, lon)
+        return jsonify(
+            {
+                "success": True,
+                "source": "Browser GPS",
+                "lat": round(lat, 4),
+                "lon": round(lon, 4),
+                "city": city,
+                "region": region,
+                "country": country,
+                "label": label,
+            }
+        )
+
+    # 2. Saved Home Base in SQLite (prevents ISP Montreal gateway override on home Wi-Fi)
+    if _is_lan_client(request.remote_addr):
+        conn = get_db()
+        _ensure_weather_table(conn)
+        home = conn.execute("SELECT label, lat, lon FROM weather_home WHERE id = 1").fetchone()
+        conn.close()
+        if home:
+            return jsonify(
+                {
+                    "success": True,
+                    "source": "Home Wi-Fi Base",
+                    "lat": home["lat"],
+                    "lon": home["lon"],
+                    "city": home["label"].split(",")[0].strip(),
+                    "region": "",
+                    "country": "",
+                    "label": home["label"],
+                }
+            )
+
+    # 3. macOS Wi-Fi CoreLocation on the Mac mini host (~15m accuracy)
+    if force_live or _is_lan_client(request.remote_addr):
+        mac_coords = _detect_macos_corelocation()
+        if mac_coords:
+            m_lat, m_lon = mac_coords
+            city, region, country, label = _reverse_geocode_city(m_lat, m_lon)
+            return jsonify(
+                {
+                    "success": True,
+                    "source": "Mac Wi-Fi Positioning",
+                    "lat": m_lat,
+                    "lon": m_lon,
+                    "city": city,
+                    "region": region,
+                    "country": country,
+                    "label": label,
+                }
+            )
+
+    # 4. IP-based geolocation fallback
+    for provider_url, parser in (
+        (
+            "https://ipapi.co/json/",
+            lambda d: (
+                float(d["latitude"]),
+                float(d["longitude"]),
+                d.get("city") or "",
+                d.get("region") or "",
+                d.get("country_name") or "",
+            ),
+        ),
+        (
+            "http://ip-api.com/json/?fields=status,country,regionName,city,lat,lon",
+            lambda d: (
+                float(d["lat"]),
+                float(d["lon"]),
+                d.get("city") or "",
+                d.get("regionName") or "",
+                d.get("country") or "",
+            )
+            if d.get("status") == "success"
+            else (_ for _ in ()).throw(ValueError("ip-api failed")),
+        ),
+    ):
+        try:
+            raw = _http_get_json(provider_url, timeout=4)
+            d_lat, d_lon, city, region, country = parser(raw)
+            label = ", ".join(p for p in (city, region, country) if p)
+            return jsonify(
+                {
+                    "success": True,
+                    "source": "IP Location",
+                    "lat": round(d_lat, 4),
+                    "lon": round(d_lon, 4),
+                    "city": city or "Detected Area",
+                    "region": region,
+                    "country": country,
+                    "label": label or "Detected Area",
+                }
+            )
+        except Exception:
+            continue
+
+    return jsonify(
+        {
+            "success": True,
+            "source": "Default Location",
+            "lat": 45.3834,
+            "lon": -73.5166,
+            "city": "Candiac",
+            "region": "Quebec",
+            "country": "Canada",
+            "label": "Candiac, Quebec, Canada",
+        }
+    )
+
+
+
+@app.route("/api/weather/search", methods=["GET"])
+def api_weather_search():
+    import urllib.parse
+
+    if not session.get("user_id"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    q = (request.args.get("q") or "").strip()
+    if len(q) < 2:
+        return jsonify({"success": True, "results": []})
+
+    try:
+        url = "https://geocoding-api.open-meteo.com/v1/search?" + urllib.parse.urlencode(
+            {"name": q, "count": 7, "language": "en", "format": "json"}
+        )
+        data = _http_get_json(url, timeout=5)
+        results = []
+        for item in data.get("results") or []:
+            parts = [item.get("name"), item.get("admin1"), item.get("country")]
+            results.append(
+                {
+                    "name": item.get("name") or "",
+                    "region": item.get("admin1") or "",
+                    "country": item.get("country") or "",
+                    "label": ", ".join(p for p in parts if p),
+                    "lat": round(float(item["latitude"]), 4),
+                    "lon": round(float(item["longitude"]), 4),
+                    "timezone": item.get("timezone") or "auto",
+                }
+            )
+        return jsonify({"success": True, "results": results})
+    except Exception as exc:
+        return jsonify({"success": False, "error": str(exc)}), 502
+
+
+@app.route("/api/weather/forecast", methods=["GET"])
+def api_weather_forecast():
+    import urllib.parse
+
+    if not session.get("user_id"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    lat = request.args.get("lat", type=float)
+    lon = request.args.get("lon", type=float)
+    label = (request.args.get("label") or "").strip()
+    if lat is None or lon is None:
+        return jsonify({"success": False, "error": "Missing coordinates"}), 400
+
+    forecast_params = {
+        "latitude": lat,
+        "longitude": lon,
+        "current": ",".join(
+            [
+                "temperature_2m",
+                "relative_humidity_2m",
+                "apparent_temperature",
+                "is_day",
+                "precipitation",
+                "weather_code",
+                "cloud_cover",
+                "pressure_msl",
+                "wind_speed_10m",
+                "wind_direction_10m",
+                "wind_gusts_10m",
+            ]
+        ),
+        "hourly": ",".join(
+            [
+                "temperature_2m",
+                "precipitation_probability",
+                "weather_code",
+                "is_day",
+                "wind_speed_10m",
+            ]
+        ),
+        "daily": ",".join(
+            [
+                "weather_code",
+                "temperature_2m_max",
+                "temperature_2m_min",
+                "precipitation_sum",
+                "precipitation_probability_max",
+                "sunrise",
+                "sunset",
+                "uv_index_max",
+                "wind_speed_10m_max",
+            ]
+        ),
+        "timezone": "auto",
+        "forecast_days": 7,
+    }
+
+    try:
+        fc_url = "https://api.open-meteo.com/v1/forecast?" + urllib.parse.urlencode(forecast_params)
+        fc = _http_get_json(fc_url, timeout=7)
+    except Exception as exc:
+        return jsonify({"success": False, "error": f"Weather fetch failed: {exc}"}), 502
+
+    aqi_data = {}
+    try:
+        aqi_url = "https://air-quality-api.open-meteo.com/v1/air-quality?" + urllib.parse.urlencode(
+            {
+                "latitude": lat,
+                "longitude": lon,
+                "current": "us_aqi,pm2_5,pm10,uv_index",
+                "timezone": "auto",
+            }
+        )
+        aqi_raw = _http_get_json(aqi_url, timeout=4)
+        aqi_data = aqi_raw.get("current") or {}
+    except Exception:
+        aqi_data = {}
+
+    return jsonify(
+        {
+            "success": True,
+            "location_name": label,
+            "timezone": fc.get("timezone") or "Local",
+            "elevation": fc.get("elevation"),
+            "current": fc.get("current") or {},
+            "hourly": fc.get("hourly") or {},
+            "daily": fc.get("daily") or {},
+            "air_quality": aqi_data,
+        }
+    )
+
+
+@app.route("/api/weather/ai-brief", methods=["POST"])
+def api_weather_ai_brief():
+    import json
+    import urllib.request
+
+    if not session.get("user_id"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    loc = (data.get("location") or "your area").strip()
+    temp = data.get("temp")
+    feels = data.get("feels_like")
+    cond = (data.get("condition") or "").strip()
+    wind = data.get("wind")
+    precip_prob = data.get("precip_prob")
+    high = data.get("high")
+    low = data.get("low")
+
+    # Deterministic fallback advice if LM Studio is offline
+    advice_parts = []
+    if temp is not None:
+        if temp <= -5:
+            advice_parts.append("Bundle up in a heavy winter coat, gloves, and warm layers.")
+        elif temp <= 5:
+            advice_parts.append("Wear a warm jacket or fleece—it's chilly outside.")
+        elif temp <= 16:
+            advice_parts.append("A light jacket or hoodie is ideal for today's mild temperatures.")
+        elif temp <= 26:
+            advice_parts.append("Comfortable weather for a t-shirt and outdoor activities.")
+        else:
+            advice_parts.append("Stay hydrated, wear light breathable clothes, and use sunscreen.")
+    if (precip_prob or 0) >= 40 or any(w in cond.lower() for w in ("rain", "drizzle", "shower", "snow", "storm")):
+        advice_parts.append("Bring an umbrella or waterproof shell for expected precipitation.")
+    if (wind or 0) >= 30:
+        advice_parts.append(f"Expect brisk gusts around {round(wind)} km/h.")
+    fallback_brief = " ".join(advice_parts) or f"Currently {cond.lower()} in {loc} with a high of {high}°C and low of {low}°C."
+
+    prompt = (
+        f"Give a helpful, friendly 2-sentence family weather and outfit briefing for {loc}. "
+        f"Current: {temp}°C (feels like {feels}°C), {cond}, wind {wind} km/h, "
+        f"today's high {high}°C / low {low}°C, rain/snow chance {precip_prob}%. "
+        "Write 2 complete sentences with no markdown and stay under 50 words."
+    )
+
+    try:
+        payload = json.dumps(
+            {
+                "messages": [
+                    {"role": "system", "content": "You are HomeNest's concise family weather assistant."},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": 0.4,
+                "max_tokens": 260,
+            }
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            "http://127.0.0.1:1234/v1/chat/completions",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            res_json = json.loads(resp.read().decode("utf-8"))
+            msg = res_json["choices"][0]["message"]["content"].strip()
+            if msg:
+                return jsonify({"success": True, "brief": msg, "source": "LM Studio"})
+    except Exception:
+        pass
+
+    return jsonify({"success": True, "brief": fallback_brief, "source": "Smart Forecast"})
+
+
+def _fallback_weather_chat(question, loc, structured, unit_sym):
+    q = (question or "").lower()
+    cur = structured.get("current") or {}
+    hourly = structured.get("hourly_summary") or {}
+    daily = structured.get("daily") or []
+
+    temp = cur.get("temp")
+    feels = cur.get("feels_like")
+    cond = cur.get("condition", "variable conditions")
+    wind = cur.get("wind")
+    gusts = cur.get("gusts")
+    humidity = cur.get("humidity")
+    aqi = cur.get("aqi")
+    uv = cur.get("uv_max")
+    hi0 = daily[0]["high"] if daily else None
+    lo0 = daily[0]["low"] if daily else None
+    pop0 = daily[0]["precip_prob"] if daily else 0
+
+    if any(k in q for k in ("wear", "outfit", "cloth", "jacket", "coat", "dress")):
+        parts = []
+        if temp is not None:
+            temp_c = (temp - 32) * 5 / 9 if unit_sym == "°F" else temp
+            if temp_c <= -5:
+                parts.append(f"At {temp}{unit_sym} (feels like {feels}{unit_sym}), wear a heavy winter coat, insulated gloves, and warm layers.")
+            elif temp_c <= 5:
+                parts.append(f"It's chilly at {temp}{unit_sym} (feels like {feels}{unit_sym})—go with a warm jacket, sweater, or fleece.")
+            elif temp_c <= 16:
+                parts.append(f"Mild at {temp}{unit_sym}; a light jacket or hoodie is ideal, especially with a low of {lo0}{unit_sym}.")
+            else:
+                parts.append(f"Comfortable at {temp}{unit_sym}; light breathable layers work well.")
+        if (pop0 or 0) >= 35 or any(w in cond.lower() for w in ("rain", "drizzle", "snow", "shower")):
+            parts.append(f"Bring an umbrella or waterproof layer ({pop0}% precipitation chance).")
+        return " ".join(parts)
+
+    if any(k in q for k in ("rain", "snow", "precip", "umbrella", "storm", "wet")):
+        peak_pop = hourly.get("max_pop_24h", pop0)
+        peak_time = hourly.get("peak_pop_time", "later today")
+        wet_days = [f"{d['day']} ({d['precip_prob']}%)" for d in daily if (d.get("precip_prob") or 0) >= 35]
+        msg = f"In {loc}, the next 24 hours peak at a {peak_pop}% chance of precipitation around {peak_time}."
+        if wet_days:
+            msg += f" Later in the week, watch for precipitation on {', '.join(wet_days[:3])}."
+        else:
+            msg += " No major rain or snow systems stand out in the 7-day outlook."
+        return msg
+
+    if any(k in q for k in ("wind", "gust", "air", "aqi", "uv", "sun", "humidity")):
+        return (
+            f"In {loc}, winds are {wind} km/h (gusts up to {gusts} km/h) with {humidity}% humidity. "
+            f"US Air Quality Index is {aqi if aqi is not None else 'N/A'}, max UV index is {uv}, "
+            f"sunrise is at {cur.get('sunrise', '--:--')}, and sunset is at {cur.get('sunset', '--:--')}."
+        )
+
+    if any(k in q for k in ("week", "7-day", "7 day", "tomorrow", "weekend", "outlook")):
+        if len(daily) >= 2:
+            tmr = daily[1]
+            week_his = [d["high"] for d in daily if d.get("high") is not None]
+            week_los = [d["low"] for d in daily if d.get("low") is not None]
+            return (
+                f"Tomorrow ({tmr['day']}) in {loc} looks {tmr['condition'].lower()} with a high of {tmr['high']}{unit_sym}, "
+                f"low of {tmr['low']}{unit_sym}, and {tmr['precip_prob']}% precipitation chance. "
+                f"Across the next 7 days, highs range from {min(week_los)}{unit_sym} up to {max(week_his)}{unit_sym}."
+            )
+
+    # Default full summary
+    tmr_note = ""
+    if len(daily) >= 2:
+        tmr = daily[1]
+        tmr_note = f" Tomorrow ({tmr['day']}) will be {tmr['condition'].lower()} ({tmr['high']}{unit_sym} / {tmr['low']}{unit_sym})."
+    return (
+        f"Right now in {loc}, it's {temp}{unit_sym} (feels like {feels}{unit_sym}) with {cond.lower()} and {wind} km/h winds. "
+        f"Today's high is {hi0}{unit_sym}, tonight's low is {lo0}{unit_sym}, and precipitation chance is {pop0}%.{tmr_note}"
+    )
+
+
+@app.route("/api/weather/ai-chat", methods=["POST"])
+def api_weather_ai_chat():
+    import json
+    import urllib.request
+
+    if not session.get("user_id"):
+        return jsonify({"success": False, "error": "Unauthorized"}), 401
+
+    data = request.get_json(silent=True) or {}
+    loc = (data.get("location") or "Current Location").strip()
+    question = (data.get("question") or "Summarize the weather forecast.").strip()
+    weather_context = (data.get("weather_context") or "").strip()
+    structured = data.get("structured") or {}
+    unit_sym = data.get("unit") or "°C"
+    history = data.get("history") or []
+
+    system_prompt = (
+        f"You are HomeNest Weather AI, a concise, helpful family weather assistant for {loc}. "
+        f"Answer questions using ONLY the live forecast data below (units are in {unit_sym}). "
+        "Keep answers clear, practical, and under 80 words with no markdown tables.\n\n"
+        f"LIVE FORECAST DATA:\n{weather_context}"
+    )
+
+    messages = [{"role": "system", "content": system_prompt}]
+    for turn in history[-6:]:
+        role = turn.get("role")
+        content = (turn.get("content") or "").strip()
+        if role in ("user", "assistant") and content:
+            messages.append({"role": role, "content": content})
+    messages.append({"role": "user", "content": question})
+
+    try:
+        payload = json.dumps(
+            {
+                "messages": messages,
+                "temperature": 0.35,
+                "max_tokens": 350,
+            }
+        ).encode("utf-8")
+        req = urllib.request.Request(
+            "http://127.0.0.1:1234/v1/chat/completions",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            res_json = json.loads(resp.read().decode("utf-8"))
+            reply = res_json["choices"][0]["message"]["content"].strip()
+            if reply:
+                return jsonify({"success": True, "reply": reply, "source": "LM Studio"})
+    except Exception:
+        pass
+
+    fallback_reply = _fallback_weather_chat(question, loc, structured, unit_sym)
+    return jsonify({"success": True, "reply": fallback_reply, "source": "Smart Forecast"})
+
 
 if __name__ == "__main__":
     print(f"HomeNest storage mounted at: {STORAGE_DIR}")
