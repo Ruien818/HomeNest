@@ -2333,28 +2333,6 @@ def api_tool_history(tool):
     return jsonify({"status": "cleared"})
     
 
-def _http_get_text(url, timeout=8, extra_headers=None):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-        "Accept": "application/json, application/xml, text/xml, text/html, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-    if extra_headers:
-        headers.update(extra_headers)
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        resp = urllib.request.urlopen(req, timeout=timeout)
-    except Exception as exc:
-        if "CERTIFICATE_VERIFY_FAILED" in str(exc) or isinstance(getattr(exc, "reason", None), ssl.SSLError):
-            ctx = ssl._create_unverified_context()
-            resp = urllib.request.urlopen(req, timeout=timeout, context=ctx)
-        else:
-            raise
-    with resp:
-        final_url = resp.geturl()
-        raw = resp.read().decode("utf-8", errors="replace")
-        return raw, final_url
-
 
 def _strip_tags(raw_html):
     text = re.sub(r"<[^>]+>", " ", html.unescape(raw_html or ""))
@@ -4377,6 +4355,615 @@ def api_weather_ai_chat():
     return jsonify({"success": True, "reply": fallback_reply, "source": "Smart Forecast"})
 
 
+import math
+import urllib.parse
+import urllib.request
+import json
+from flask import request, jsonify
+
+
+def _derive_safety_advice(title: str, description: str, instruction: str = "") -> list[str]:
+    if instruction and instruction.strip():
+        lines = [line.strip(" •-\t") for line in instruction.strip().splitlines() if line.strip()]
+        if lines:
+            return lines[:5]
+
+    blob = f"{title} {description}".lower()
+    advice = []
+    if any(k in blob for k in ("tornado", "funnel cloud")):
+        advice.extend([
+            "Move immediately to a basement, storm cellar, or an interior room on the lowest floor away from windows.",
+            "If in a vehicle or mobile home, abandon it and seek sturdy shelter right away.",
+            "Protect your head and neck with heavy blankets, cushions, or a helmet."
+        ])
+    elif any(k in blob for k in ("freezing rain", "ice storm", "black ice", "flash freeze")):
+        advice.extend([
+            "Delay non-essential highway and local travel until roads and sidewalks are salted.",
+            "Watch for falling tree branches and downed power lines weighed down by ice.",
+            "Charge phones and backup batteries in case localized power outages occur."
+        ])
+    elif any(k in blob for k in ("blizzard", "winter storm", "heavy snow", "snow squall", "blowing snow")):
+        advice.extend([
+            "Avoid unnecessary driving; whiteout conditions can reduce visibility to near zero.",
+            "Keep an emergency winter kit (blankets, flashlight, water, shovel) in your vehicle.",
+            "Dress in insulated, windproof layers and limit prolonged outdoor exposure."
+        ])
+    elif any(k in blob for k in ("extreme cold", "wind chill", "arctic")):
+        advice.extend([
+            "Cover all exposed skin—frostbite can develop within minutes in severe wind chill.",
+            "Wear layered thermal clothing, insulated gloves, a hat, and a face covering.",
+            "Keep pets indoors and check on vulnerable neighbors or family members."
+        ])
+    elif any(k in blob for k in ("thunderstorm", "lightning", "hail")):
+        advice.extend([
+            "Move indoors immediately when thunder is heard; stay away from windows and plumbing.",
+            "Move vehicles under cover to protect against damaging hail and falling limbs.",
+            "Unplug sensitive electronics if frequent lightning is occurring nearby."
+        ])
+    elif any(k in blob for k in ("flood", "heavy rain", "rainfall")):
+        advice.extend([
+            "Never walk, swim, or drive through flooded roads—turn around, don't drown.",
+            "Clear leaves and debris from storm drains and check basement sump pumps.",
+            "Move valuables and electronics off basement floors if water rises."
+        ])
+    elif any(k in blob for k in ("wind", "gale", "squall")):
+        advice.extend([
+            "Secure loose patio furniture, garbage bins, and outdoor equipment.",
+            "Use extra caution while driving high-profile vehicles on bridges and open roads.",
+            "Stay clear of damaged trees and any downed utility wires."
+        ])
+    elif any(k in blob for k in ("heat", "humidex")):
+        advice.extend([
+            "Drink plenty of cool water even before feeling thirsty and avoid strenuous midday exertion.",
+            "Stay in air-conditioned spaces or shaded areas during peak afternoon heat.",
+            "Never leave children or pets unattended inside a parked vehicle."
+        ])
+    elif any(k in blob for k in ("air quality", "smoke", "smog")):
+        advice.extend([
+            "Keep windows and doors closed and set home HVAC systems to recirculate indoor air.",
+            "Reduce strenuous outdoor exercise, especially for children and anyone with asthma.",
+            "Wear a well-fitted N95/KN95 mask if prolonged outdoor time is unavoidable."
+        ])
+    else:
+        advice.extend([
+            "Monitor official national weather updates closely as conditions evolve.",
+            "Adjust outdoor plans and commute timing to avoid peak hazardous weather.",
+            "Keep mobile devices charged and emergency supplies accessible."
+        ])
+    return advice
+
+
+def _fetch_json_url(url: str, timeout: float = 6.0):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "HomeNestWeather/1.0 (contact@homenest.local)",
+            "Accept": "application/geo+json, application/json",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+import json
+import math
+import re
+import unicodedata
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
+
+
+def _strip_accents(text):
+    if not text:
+        return ""
+    norm = unicodedata.normalize("NFKD", str(text))
+    return "".join(ch for ch in norm if not unicodedata.combining(ch)).lower().strip()
+
+
+def _http_get_json(url, timeout=8):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "HomeNestWeather/1.0 (local-dashboard)",
+            "Accept": "application/geo+json, application/json, */*",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+import ssl
+import urllib.error
+
+try:
+    import certifi
+    _SSL_CTX = ssl.create_default_context(cafile=certifi.where())
+except Exception:
+    _SSL_CTX = ssl._create_unverified_context()
+
+ssl._create_default_https_context = lambda: _SSL_CTX
+
+
+def _safe_urlopen(req, timeout=8):
+    try:
+        return urllib.request.urlopen(req, timeout=timeout, context=_SSL_CTX)
+    except (ssl.SSLError, urllib.error.URLError) as err:
+        reason = getattr(err, "reason", err)
+        if (
+            isinstance(err, ssl.SSLError)
+            or isinstance(reason, ssl.SSLError)
+            or "CERTIFICATE_VERIFY_FAILED" in str(err)
+        ):
+            return urllib.request.urlopen(
+                req, timeout=timeout, context=ssl._create_unverified_context()
+            )
+        raise
+
+
+def _http_get_json(url, timeout=8):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "HomeNestWeather/1.0 (local-dashboard)",
+            "Accept": "application/geo+json, application/json, */*",
+        },
+    )
+    with _safe_urlopen(req, timeout=timeout) as resp:
+        return json.loads(resp.read().decode("utf-8", errors="replace"))
+
+
+def _http_get_text(url, timeout=8):
+    req = urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": "HomeNestWeather/1.0 (local-dashboard)",
+            "Accept": "application/xml, text/xml, application/rss+xml, */*",
+        },
+    )
+    with _safe_urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8", errors="replace")
+
+
+def _point_in_ring(lon, lat, ring):
+    inside = False
+    n = len(ring)
+    if n < 3:
+        return False
+    j = n - 1
+    for i in range(n):
+        xi, yi = float(ring[i][0]), float(ring[i][1])
+        xj, yj = float(ring[j][0]), float(ring[j][1])
+        intersect = ((yi > lat) != (yj > lat)) and (
+            lon < (xj - xi) * (lat - yi) / ((yj - yi) or 1e-12) + xi
+        )
+        if intersect:
+            inside = not inside
+        j = i
+    return inside
+
+
+def _point_in_geojson(lon, lat, geom, buffer_deg=0.18):
+    if not geom or not isinstance(geom, dict):
+        return False
+    gtype = geom.get("type")
+    coords = geom.get("coordinates") or []
+    rings = []
+    if gtype == "Polygon":
+        rings = coords[:1]
+    elif gtype == "MultiPolygon":
+        rings = [poly[0] for poly in coords if poly]
+    elif gtype == "Point" and len(coords) >= 2:
+        return math.hypot(float(coords[0]) - lon, float(coords[1]) - lat) <= max(buffer_deg, 0.35)
+
+    for ring in rings:
+        if not ring:
+            continue
+        lons = [float(p[0]) for p in ring]
+        lats = [float(p[1]) for p in ring]
+        if not (min(lons) - buffer_deg <= lon <= max(lons) + buffer_deg and min(lats) - buffer_deg <= lat <= max(lats) + buffer_deg):
+            continue
+        if _point_in_ring(lon, lat, ring):
+            return True
+        # Also match if point is right on the metro border (within buffer_deg)
+        if min(lons) - buffer_deg <= lon <= max(lons) + buffer_deg and min(lats) - buffer_deg <= lat <= max(lats) + buffer_deg:
+            for px, py in ring[::max(1, len(ring) // 40)]:
+                if math.hypot(float(px) - lon, float(py) - lat) <= buffer_deg:
+                    return True
+    return False
+
+
+def _default_advice_for_title(title):
+    t = _strip_accents(title)
+    if any(k in t for k in ("rain", "chuva", "flood", "inund", "storm", "tempestade", "thunder")):
+        return [
+            "Avoid flooded underpasses, low-lying roads, and fast-moving water.",
+            "Stay indoors during lightning and secure loose outdoor items.",
+            "Monitor local transit and power updates before traveling.",
+        ]
+    if any(k in t for k in ("snow", "neige", "blizzard", "freezing", "verglas", "ice", "cold", "froid")):
+        return [
+            "Allow extra stopping distance and delay non-essential travel in slick conditions.",
+            "Dress in warm, wind-resistant layers and protect exposed skin.",
+            "Keep phones and backup power banks charged in case of localized outages.",
+        ]
+    if any(k in t for k in ("wind", "vent", "vendaval", "gale", "hurricane", "tornado")):
+        return [
+            "Secure balcony furniture, bins, and loose yard objects.",
+            "Watch for falling branches and downed utility wires.",
+        ]
+    if any(k in t for k in ("heat", "calor", "chaleur")):
+        return [
+            "Stay hydrated, limit strenuous midday outdoor activity, and seek shade or A/C.",
+            "Never leave children or pets inside parked vehicles.",
+        ]
+    return [
+        "Follow instructions from your national meteorological agency and local authorities.",
+        "Check road and transit conditions before departing.",
+    ]
+
+
+def _fetch_eccc_alerts(lat, lon, label):
+    bbox = f"{lon - 0.35:.4f},{lat - 0.35:.4f},{lon + 0.35:.4f},{lat + 0.35:.4f}"
+    url = f"https://api.weather.gc.ca/collections/weather-alerts/items?f=json&lang=en&bbox={bbox}"
+    payload = _http_get_json(url)
+    alerts = []
+    for feat in payload.get("features") or []:
+        geom = feat.get("geometry")
+        if geom and not _point_in_geojson(lon, lat, geom, buffer_deg=0.12):
+            continue
+        props = feat.get("properties") or {}
+        atype = (props.get("alert_type") or "warning").lower()
+        sev = (props.get("severity") or ("severe" if "warning" in atype else "moderate")).lower()
+        title = props.get("alert_name_en") or props.get("headline_en") or "Environment Canada Weather Alert"
+        desc = props.get("descrip_en") or props.get("headline_en") or title
+        area = props.get("area_en") or props.get("zone_en") or label
+        alerts.append({
+            "id": str(feat.get("id") or f"eccc-{len(alerts)}"),
+            "provider": "Environment and Climate Change Canada (ECCC)",
+            "certified": True,
+            "type": "warning" if "warning" in atype else ("watch" if "watch" in atype else "advisory"),
+            "severity": sev,
+            "title": title,
+            "headline": props.get("headline_en") or title,
+            "area": area,
+            "effective": props.get("effective_datetime") or props.get("sent_datetime") or "",
+            "expires": props.get("expires_datetime") or "",
+            "description": desc,
+            "advice": _default_advice_for_title(title),
+            "agency_url": "https://weather.gc.ca/warnings/index_e.html",
+        })
+    return alerts
+
+
+def _fetch_nws_alerts(lat, lon, label):
+    url = f"https://api.weather.gov/alerts/active?point={lat:.4f},{lon:.4f}"
+    payload = _http_get_json(url)
+    alerts = []
+    for feat in payload.get("features") or []:
+        props = feat.get("properties") or {}
+        event = props.get("event") or "NWS Weather Alert"
+        sev = (props.get("severity") or "Moderate").lower()
+        instr = props.get("instruction") or ""
+        advice = [line.strip(" •-") for line in instr.splitlines() if line.strip()][:4] or _default_advice_for_title(event)
+        alerts.append({
+            "id": str(props.get("id") or f"nws-{len(alerts)}"),
+            "provider": "NOAA National Weather Service (NWS)",
+            "certified": True,
+            "type": "warning" if "warning" in event.lower() else ("watch" if "watch" in event.lower() else "advisory"),
+            "severity": sev,
+            "title": event,
+            "headline": props.get("headline") or event,
+            "area": props.get("areaDesc") or label,
+            "effective": props.get("effective") or props.get("onset") or "",
+            "expires": props.get("expires") or "",
+            "description": props.get("description") or props.get("headline") or event,
+            "advice": advice,
+            "agency_url": props.get("@id") or "https://www.weather.gov/",
+        })
+    return alerts
+
+
+def _fetch_inmet_brazil_alerts(lat, lon, label):
+    url = "https://apiprevmet3.inmet.gov.br/avisos/ativos"
+    payload = _http_get_json(url)
+    raw_items = (payload.get("hoje") or []) + (payload.get("futuro") or [])
+    norm_label = _strip_accents(label)
+    city_token = norm_label.split(",")[0].strip()
+    state_token = norm_label.split(",")[1].strip() if "," in norm_label else ""
+
+    alerts = []
+    seen_ids = set()
+    for item in raw_items:
+        aid = str(item.get("id") or item.get("id_aviso") or "")
+        if aid and aid in seen_ids:
+            continue
+
+        matched = False
+        poly_raw = item.get("poligono")
+        if poly_raw:
+            try:
+                geom = json.loads(poly_raw) if isinstance(poly_raw, str) else poly_raw
+                if _point_in_geojson(lon, lat, geom, buffer_deg=0.15):
+                    matched = True
+            except Exception:
+                pass
+
+        if not matched:
+            haystack = _strip_accents(f"{item.get('municipios', '')} {item.get('estados', '')}")
+            if (city_token and len(city_token) >= 4 and city_token in haystack) or (
+                state_token and len(state_token) >= 4 and state_token in haystack
+            ):
+                matched = True
+
+        if not matched:
+            continue
+
+        if aid:
+            seen_ids.add(aid)
+
+        sev_pt = _strip_accents(item.get("severidade") or "")
+        if "grande perigo" in sev_pt:
+            sev = "extreme"
+            atype = "warning"
+        elif "perigo" in sev_pt and "potencial" not in sev_pt:
+            sev = "severe"
+            atype = "warning"
+        else:
+            sev = "moderate"
+            atype = "advisory"
+
+        title = f"{item.get('descricao', 'Aviso Meteorológico')} ({item.get('severidade', 'INMET')})"
+        riscos = item.get("riscos") or []
+        instrucoes = item.get("instrucoes") or []
+        desc_parts = []
+        if item.get("estados"):
+            desc_parts.append(f"States: {item['estados']}.")
+        if riscos:
+            desc_parts.append("Risks: " + " ".join(str(r) for r in riscos))
+        desc = "\n".join(desc_parts) or title
+        advice = [str(i).strip() for i in instrucoes if str(i).strip()][:4] or _default_advice_for_title(title)
+
+        alerts.append({
+            "id": aid or f"inmet-{len(alerts)}",
+            "provider": "INMET — Instituto Nacional de Meteorologia (Brazil)",
+            "certified": True,
+            "type": atype,
+            "severity": sev,
+            "title": title,
+            "headline": title,
+            "area": item.get("estados") or label,
+            "effective": item.get("inicio") or "",
+            "expires": item.get("fim") or "",
+            "description": desc,
+            "advice": advice,
+            "agency_url": "https://alertas2.inmet.gov.br/",
+        })
+    return alerts
+
+
+def _fetch_wmo_global_alerts(lat, lon, label):
+    norm_label = _strip_accents(label)
+    tokens = [t.strip() for t in norm_label.split(",") if len(t.strip()) >= 4]
+    alerts = []
+
+    try:
+        data = _http_get_json("https://severeweather.wmo.int/v2/json/wmo_ew.json")
+        entries = data if isinstance(data, list) else (data.get("features") or data.get("alerts") or data.get("data") or [])
+        for idx, entry in enumerate(entries):
+            props = entry.get("properties") if isinstance(entry, dict) and "properties" in entry else entry
+            if not isinstance(props, dict):
+                continue
+            geom = entry.get("geometry") if isinstance(entry, dict) else None
+            matched = _point_in_geojson(lon, lat, geom, buffer_deg=0.35) if geom else False
+
+            if not matched:
+                elat = props.get("lat") or props.get("latitude")
+                elon = props.get("lon") or props.get("longitude")
+                if elat is not None and elon is not None:
+                    if math.hypot(float(elon) - lon, float(elat) - lat) <= 1.2:
+                        matched = True
+
+            if not matched:
+                area_text = _strip_accents(
+                    f"{props.get('area', '')} {props.get('areaDesc', '')} {props.get('country', '')} {props.get('headline', '')}"
+                )
+                if any(tok in area_text for tok in tokens[:2]):
+                    matched = True
+
+            if not matched:
+                continue
+
+            title = props.get("event") or props.get("headline") or props.get("title") or "WMO Severe Weather Warning"
+            sev = str(props.get("severity") or "severe").lower()
+            alerts.append({
+                "id": str(props.get("id") or props.get("identifier") or f"wmo-{idx}"),
+                "provider": props.get("senderName") or "WMO Severe Weather Information Centre (CAP)",
+                "certified": True,
+                "type": "warning" if sev in ("extreme", "severe") else "advisory",
+                "severity": sev,
+                "title": title,
+                "headline": props.get("headline") or title,
+                "area": props.get("areaDesc") or props.get("area") or label,
+                "effective": props.get("onset") or props.get("effective") or "",
+                "expires": props.get("expires") or "",
+                "description": props.get("description") or props.get("headline") or title,
+                "advice": _default_advice_for_title(title),
+                "agency_url": props.get("web") or "https://severeweather.wmo.int/",
+            })
+        if alerts:
+            return alerts
+    except Exception:
+        pass
+
+    # Fallback to WMO RSS feed
+    xml_text = _http_get_text("https://severeweather.wmo.int/rss.xml")
+    root = ET.fromstring(xml_text)
+    for idx, item in enumerate(root.findall(".//item")):
+        title = item.findtext("title") or ""
+        desc = item.findtext("description") or ""
+        haystack = _strip_accents(f"{title} {desc}")
+        if any(tok in haystack for tok in tokens[:2]):
+            alerts.append({
+                "id": f"wmo-rss-{idx}",
+                "provider": "WMO Severe Weather Information Centre (CAP)",
+                "certified": True,
+                "type": "warning",
+                "severity": "severe",
+                "title": title.strip(),
+                "headline": title.strip(),
+                "area": label,
+                "effective": item.findtext("pubDate") or "",
+                "expires": "",
+                "description": re.sub(r"<[^>]+>", " ", desc).strip(),
+                "advice": _default_advice_for_title(title),
+                "agency_url": item.findtext("link") or "https://severeweather.wmo.int/",
+            })
+    return alerts
+
+
+@app.route("/api/weather/alerts")
+def api_weather_alerts():
+    try:
+        lat = float(request.args.get("lat", 45.3834))
+        lon = float(request.args.get("lon", -73.5166))
+    except ValueError:
+        return jsonify({"success": False, "error": "Invalid coordinates"}), 400
+
+    label = request.args.get("label", "")
+    norm_label = _strip_accents(label)
+
+    is_brazil = ("brazil" in norm_label or "brasil" in norm_label) or (-34.0 <= lat <= 5.5 and -74.0 <= lon <= -34.0)
+    is_canada = ("canada" in norm_label) or (41.7 <= lat <= 83.5 and -141.0 <= lon <= -52.5 and "united states" not in norm_label)
+    is_us = ("united states" in norm_label or "usa" in norm_label) or (24.5 <= lat <= 49.4 and -125.0 <= lon <= -66.9 and not is_canada)
+
+    if is_brazil:
+        provider = "INMET — Instituto Nacional de Meteorologia (Brazil)"
+        agency_url = "https://alertas2.inmet.gov.br/"
+        fetcher = _fetch_inmet_brazil_alerts
+    elif is_canada:
+        provider = "Environment and Climate Change Canada (ECCC)"
+        agency_url = "https://weather.gc.ca/warnings/index_e.html"
+        fetcher = _fetch_eccc_alerts
+    elif is_us:
+        provider = "NOAA National Weather Service (NWS)"
+        agency_url = "https://www.weather.gov/"
+        fetcher = _fetch_nws_alerts
+    else:
+        provider = "WMO Severe Weather Information Centre (CAP)"
+        agency_url = "https://severeweather.wmo.int/"
+        fetcher = _fetch_wmo_global_alerts
+
+    try:
+        alerts = fetcher(lat, lon, label)
+        return jsonify({
+            "success": True,
+            "feed_ok": True,
+            "provider": provider,
+            "agency_url": agency_url,
+            "alerts": alerts,
+        })
+    except Exception as e:
+        return jsonify({
+            "success": True,
+            "feed_ok": False,
+            "provider": provider,
+            "agency_url": agency_url,
+            "alerts": [],
+            "warning": f"Agency feed temporarily unreachable: {e}",
+        })
+
+
+def _gtx_translate_text(text, target_lang="en"):
+    if not text or not str(text).strip():
+        return text
+    q = urllib.parse.quote(str(text))
+    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl={target_lang}&dt=t&q={q}"
+    req = urllib.request.Request(
+        url,
+        headers={"User-Agent": "HomeNestWeather/1.0 (local-dashboard)"},
+    )
+    with _safe_urlopen(req, timeout=8) as resp:
+        raw = json.loads(resp.read().decode("utf-8", errors="replace"))
+    return "".join(part[0] for part in (raw[0] or []) if part and part[0])
+
+
+@app.route("/api/weather/translate-alert", methods=["POST"])
+def api_weather_translate_alert():
+    body = request.get_json(silent=True) or {}
+    target_lang = "fr" if str(body.get("target_lang", "en")).lower().startswith("fr") else "en"
+    lang_name = "French" if target_lang == "fr" else "English"
+
+    payload_in = {
+        "title": str(body.get("title") or ""),
+        "headline": str(body.get("headline") or ""),
+        "area": str(body.get("area") or ""),
+        "description": str(body.get("description") or ""),
+        "advice": [str(a) for a in (body.get("advice") or [])],
+    }
+
+    # 1. Try local LM Studio first (port 1234)
+    try:
+        lm_req = urllib.request.Request(
+            "http://127.0.0.1:1234/v1/chat/completions",
+            data=json.dumps({
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": (
+                            f"You are an official meteorological translator. Translate every string value in the JSON object into clear, accurate {lang_name}. "
+                            "Preserve all numbers, measurements (mm, km/h, °C), and agency names. "
+                            "Return ONLY valid JSON with the exact same keys: title, headline, area, description, advice."
+                        ),
+                    },
+                    {"role": "user", "content": json.dumps(payload_in, ensure_ascii=False)},
+                ],
+                "temperature": 0.1,
+            }).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(lm_req, timeout=6) as resp:
+            lm_data = json.loads(resp.read().decode("utf-8", errors="replace"))
+        content = lm_data["choices"][0]["message"]["content"].strip()
+        match = re.search(r"\{.*\}", content, re.DOTALL)
+        if match:
+            parsed = json.loads(match.group(0))
+            if isinstance(parsed, dict) and parsed.get("title"):
+                return jsonify({
+                    "success": True,
+                    "source": "LM Studio",
+                    "target_lang": target_lang,
+                    "translated": {
+                        "title": str(parsed.get("title") or payload_in["title"]),
+                        "headline": str(parsed.get("headline") or payload_in["headline"]),
+                        "area": str(parsed.get("area") or payload_in["area"]),
+                        "description": str(parsed.get("description") or payload_in["description"]),
+                        "advice": [str(x) for x in (parsed.get("advice") or payload_in["advice"])],
+                    },
+                })
+    except Exception:
+        pass
+
+    # 2. Keyless fallback translator
+    try:
+        translated = {
+            "title": _gtx_translate_text(payload_in["title"], target_lang),
+            "headline": _gtx_translate_text(payload_in["headline"], target_lang),
+            "area": _gtx_translate_text(payload_in["area"], target_lang),
+            "description": _gtx_translate_text(payload_in["description"], target_lang),
+            "advice": [_gtx_translate_text(a, target_lang) for a in payload_in["advice"]],
+        }
+        return jsonify({
+            "success": True,
+            "source": "Auto-Translate",
+            "target_lang": target_lang,
+            "translated": translated,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Translation failed: {e}"}), 502
+
+    
 if __name__ == "__main__":
     print(f"HomeNest storage mounted at: {STORAGE_DIR}")
     app.run(host="0.0.0.0", port=5000, debug=True)

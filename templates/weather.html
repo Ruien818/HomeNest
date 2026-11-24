@@ -17,11 +17,24 @@
     </script>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.6.1/dist/chart.umd.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+
+
     <style>
+
+        @keyframes alertPulseBorder {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45), 0 20px 50px rgba(2, 6, 23, 0.25); }
+            50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.0), 0 20px 50px rgba(239, 68, 68, 0.25); }
+        }
+        .alert-threat-pulse {
+            animation: alertPulseBorder 2.2s infinite;
+        }
+
+
         :root {
             --bg-base: #e9eef5;
             --glass-bg: rgba(255, 255, 255, 0.72);
@@ -108,6 +121,18 @@
             background: var(--glass-hover);
         }
 
+        .widget-clickable {
+            cursor: pointer;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+        }
+        .widget-clickable:hover {
+            transform: translateY(-2px);
+            border-color: rgba(56, 189, 248, 0.45);
+        }
+        .widget-clickable:active {
+            transform: translateY(0);
+        }
+
         .glass-input {
             background: var(--glass-card);
             border: 1px solid var(--glass-border);
@@ -164,8 +189,19 @@
                     <div id="city-search-dropdown" class="hidden absolute left-0 sm:left-auto sm:right-0 min-w-[280px] mt-1.5 rounded-2xl p-1.5 z-50 space-y-1 max-h-64 overflow-y-auto bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-[var(--glass-border)] shadow-2xl"></div>
                 </div>
 
+                <!-- Certified National Alert Status & Test Trigger -->
+                <div class="inline-flex items-center gap-1">
+                    <button type="button" id="alert-status-pill" onclick="handleAlertPillClick()" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-emerald-500/35 text-emerald-500 transition-all" title="Certified National Weather Alerts Status">
+                        <span id="alert-status-dot" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        <span id="alert-status-text">ECCC Clear</span>
+                    </button>
+                    <button type="button" onclick="triggerTestWeatherAlert()" class="glass-subcard px-2.5 py-2 rounded-2xl text-[11px] font-mono font-bold text-amber-500 hover:bg-amber-500/10 transition-all" title="Test Emergency Warning Sound & UI">
+                        Test Alert
+                    </button>
+                </div>
+
                 <!-- Weather AI Assistant Trigger -->
-                <button onclick="openWeatherAiDrawer()" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-indigo-500/40 bg-gradient-to-r from-sky-500/15 to-indigo-500/15 text-sky-500 dark:text-sky-300 hover:border-sky-400 transition-all" title="Ask Weather AI Assistant">
+                <button type="button" onclick="openWeatherAiDrawer()" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-indigo-500/40 bg-gradient-to-r from-sky-500/15 to-indigo-500/15 text-sky-500 dark:text-sky-300 hover:border-sky-400 transition-all" title="Ask Weather AI Assistant">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"></path>
                     </svg>
@@ -173,7 +209,7 @@
                 </button>
 
                 <!-- Auto-Detect Location Button -->
-                <button onclick="autoDetectLocation(true)" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-sky-500/40 text-sky-500 hover:bg-sky-500/10 transition-all" title="Detect High-Precision Location">
+                <button type="button" onclick="autoDetectLocation(true)" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-sky-500/40 text-sky-500 hover:bg-sky-500/10 transition-all" title="Detect High-Precision Location">
                     <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                         <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
                     </svg>
@@ -181,7 +217,7 @@
                 </button>
 
                 <!-- Unit Toggle °C / °F -->
-                <button onclick="toggleTempUnit()" id="unit-toggle-btn" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-mono font-bold hover:border-sky-500/50 transition-all" title="Switch °C / °F">
+                <button type="button" onclick="toggleTempUnit()" id="unit-toggle-btn" class="glass-subcard px-3 py-2 rounded-2xl text-xs font-mono font-bold hover:border-sky-500/50 transition-all" title="Switch °C / °F">
                     °C
                 </button>
 
@@ -197,7 +233,7 @@
                 </a>
 
                 <!-- Theme Toggle -->
-                <button onclick="toggleTheme()" class="glass-subcard w-9 h-9 rounded-2xl flex items-center justify-center hover:border-sky-500/50 transition-all" title="Toggle Theme">
+                <button type="button" onclick="toggleTheme()" class="glass-subcard w-9 h-9 rounded-2xl flex items-center justify-center hover:border-sky-500/50 transition-all" title="Toggle Theme">
                     <svg class="w-4 h-4 icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                     </svg>
@@ -220,7 +256,7 @@
                         <span id="user-initial">R</span>
                     </div>
                     <span id="user-display-name" class="font-semibold hidden sm:inline">Member</span>
-                    <button onclick="signOut()" class="text-[var(--text-subtle)] hover:text-rose-500 transition-colors ml-0.5" title="Sign Out">
+                    <button type="button" onclick="signOut()" class="text-[var(--text-subtle)] hover:text-rose-500 transition-colors ml-0.5" title="Sign Out">
                         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                             <polyline points="16 17 21 12 16 7"></polyline>
@@ -231,27 +267,88 @@
             </div>
         </header>
 
+        <!-- CERTIFIED NATIONAL WEATHER WARNING BANNER -->
+        <section id="national-alert-banner" class="hidden relative z-20 rounded-3xl p-5 sm:p-6 border-2 border-rose-500/75 bg-gradient-to-r from-rose-600/20 via-red-600/15 to-amber-500/15 backdrop-blur-2xl alert-threat-pulse space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                <div class="flex items-start gap-3.5">
+                    <div id="alert-banner-icon" class="w-12 h-12 rounded-2xl bg-rose-500 text-white flex items-center justify-center flex-shrink-0 shadow-lg">
+                        <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        </svg>
+                    </div>
+                    <div class="space-y-1">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span id="alert-severity-badge" class="text-[10px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-500 text-white">SEVERE WARNING</span>
+                            <span id="alert-provider-badge" class="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-white/80 dark:bg-slate-900/80 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40">✓ CERTIFIED · ENVIRONMENT CANADA</span>
+                            <span id="alert-count-badge" class="hidden text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300"></span>
+                        </div>
+                        <h2 id="alert-banner-title" class="text-xl sm:text-2xl font-extrabold tracking-tight text-rose-600 dark:text-rose-300">Severe Weather Warning</h2>
+                        <p id="alert-banner-meta" class="text-xs font-mono text-[var(--text-muted)]">Area: -- · Expires: --</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2 self-start">
+                    <div class="inline-flex items-center rounded-2xl glass-subcard overflow-hidden">
+                        <button type="button" id="banner-translate-en-btn" onclick="translateActiveAlert(0, 'en')" class="px-3 py-2 text-xs font-bold text-sky-500 hover:bg-sky-500/15 transition-all">
+                            English
+                        </button>
+                        <button type="button" id="banner-translate-fr-btn" onclick="translateActiveAlert(0, 'fr')" class="px-2.5 py-2 text-xs font-bold text-indigo-400 hover:bg-indigo-500/15 border-l border-[var(--glass-border)] transition-all">
+                            FR
+                        </button>
+                        <button type="button" id="banner-translate-orig-btn" onclick="restoreOriginalAlert(0)" class="hidden px-2.5 py-2 text-xs font-bold text-[var(--text-muted)] hover:bg-slate-500/15 border-l border-[var(--glass-border)] transition-all">
+                            Original
+                        </button>
+                    </div>
+                    <button type="button" onclick="playAlertAlarmSound(true)" class="px-3.5 py-2 rounded-2xl bg-rose-500/20 border border-rose-500/50 text-rose-600 dark:text-rose-300 text-xs font-bold hover:bg-rose-500/30 transition-all flex items-center gap-1.5">
+                        <span>Replay Siren</span>
+                    </button>
+                    <button type="button" id="alert-mute-btn" onclick="toggleAlertMute()" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold hover:border-rose-500/50 transition-all">
+                        Mute Alarm
+                    </button>
+                    <button type="button" onclick="openNationalAlertModal(0)" class="px-4 py-2 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-extrabold shadow transition-all">
+                        Full Bulletin &amp; Advice →
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[1.15fr_1fr] gap-3">
+                <div class="glass-subcard rounded-2xl p-3.5 space-y-1">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Official National Bulletin</div>
+                    <p id="alert-banner-desc" class="text-xs sm:text-sm text-[var(--text-main)] leading-relaxed line-clamp-3">--</p>
+                </div>
+                <div class="rounded-2xl p-3.5 bg-amber-500/15 border border-amber-500/40 space-y-1.5">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-300 flex items-center gap-1.5">
+                        <span>🛡️ Recommended Safety Advice</span>
+                    </div>
+                    <ul id="alert-banner-advice" class="text-xs text-[var(--text-main)] space-y-1 list-disc pl-4"></ul>
+                </div>
+            </div>
+        </section>
+
         <!-- SAVED LOCATIONS BAR -->
         <div class="relative z-10 flex flex-wrap items-center gap-2 px-1">
             <span class="text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)] mr-1">Saved Places:</span>
             <div id="saved-places-bar" class="flex flex-wrap items-center gap-2"></div>
-            <button onclick="pinCurrentPlace()" id="pin-place-btn" class="glass-subcard px-3 py-1 rounded-full text-[11px] font-bold text-sky-500 hover:bg-sky-500/10 transition-all">
+            <button type="button" onclick="pinCurrentPlace()" id="pin-place-btn" class="glass-subcard px-3 py-1 rounded-full text-[11px] font-bold text-sky-500 hover:bg-sky-500/10 transition-all">
                 + Save Current City
             </button>
-            <button onclick="setAsHomeBase()" id="set-home-btn" class="glass-subcard px-3 py-1 rounded-full text-[11px] font-bold text-emerald-500 border-emerald-500/35 hover:bg-emerald-500/10 transition-all" title="Use this city as default auto-locate base on your home Wi-Fi">
+            <button type="button" onclick="setAsHomeBase()" id="set-home-btn" class="glass-subcard px-3 py-1 rounded-full text-[11px] font-bold text-emerald-500 border-emerald-500/35 hover:bg-emerald-500/10 transition-all" title="Use this city as default auto-locate base on your home Wi-Fi">
                 Set as Home
             </button>
         </div>
 
-        <!-- HERO CURRENT WEATHER + AI BRIEFING -->
-        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-[1.35fr_1fr] gap-4">
+        <!-- HERO CURRENT WEATHER + PRIMARY METRICS -->
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] gap-4">
 
             <!-- Current Hero Card -->
-            <section class="glass-panel rounded-3xl p-6 sm:p-7 flex flex-col justify-between gap-5">
+            <section onclick="openWidgetDetail('current')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-6 sm:p-7 flex flex-col justify-between gap-5 text-left">
                 <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                     <div>
                         <div class="flex items-center gap-2">
                             <h2 id="weather-city-name" class="text-2xl sm:text-3xl font-extrabold tracking-tight">Detecting Location...</h2>
+                            <span class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">Details ↗</span>
                         </div>
                         <p id="weather-coords-meta" class="text-xs font-mono text-[var(--text-subtle)] mt-1">--</p>
                         <div class="flex items-baseline gap-4 mt-4">
@@ -259,6 +356,7 @@
                             <div>
                                 <div id="current-condition" class="text-base sm:text-lg font-bold">--</div>
                                 <div id="current-feels-hl" class="text-xs text-[var(--text-muted)] mt-0.5">Feels like --° · H: --° L: --°</div>
+                                <div id="current-extra-pills" class="flex flex-wrap items-center gap-1.5 mt-2"></div>
                             </div>
                         </div>
                     </div>
@@ -281,7 +379,7 @@
                             Daily Briefing
                         </span>
                         <div class="flex items-center gap-2">
-                            <button onclick="openWeatherAiDrawer()" class="text-[10px] font-bold text-sky-500 hover:underline">Ask AI →</button>
+                            <button type="button" onclick="event.stopPropagation(); openWeatherAiDrawer()" class="text-[10px] font-bold text-sky-500 hover:underline">Ask AI →</button>
                             <span id="ai-brief-source" class="text-[10px] font-mono text-[var(--text-subtle)]">Smart Forecast</span>
                         </div>
                     </div>
@@ -289,51 +387,163 @@
                 </div>
             </section>
 
-            <!-- 6-Card Atmospheric Metrics Grid -->
+            <!-- Top 6 Atmospheric Metrics Grid -->
             <section class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Wind &amp; Gusts</span>
+                <div onclick="openWidgetDetail('wind')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Wind &amp; Gusts</span>
+                        <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    </div>
                     <div id="metric-wind" class="text-xl font-extrabold font-mono mt-2">--</div>
                     <span id="metric-wind-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Gusts --</span>
                 </div>
 
-                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Humidity</span>
+                <div onclick="openWidgetDetail('humidity')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Humidity &amp; Dew</span>
+                        <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    </div>
                     <div id="metric-humidity" class="text-xl font-extrabold font-mono mt-2">--%</div>
-                    <span id="metric-cloud-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Cloud cover --%</span>
+                    <span id="metric-cloud-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Dew point --°</span>
                 </div>
 
-                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Air Quality (US)</span>
+                <div onclick="openWidgetDetail('aqi')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Air Quality (US)</span>
+                        <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    </div>
                     <div id="metric-aqi" class="text-xl font-extrabold font-mono mt-2">--</div>
                     <span id="metric-aqi-sub" class="text-[11px] text-[var(--text-muted)] mt-1">PM2.5 --</span>
                 </div>
 
-                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">UV Index Max</span>
+                <div onclick="openWidgetDetail('uv')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">UV &amp; Solar</span>
+                        <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    </div>
                     <div id="metric-uv" class="text-xl font-extrabold font-mono mt-2">--</div>
                     <span id="metric-uv-sub" class="text-[11px] text-[var(--text-muted)] mt-1">--</span>
                 </div>
 
-                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Pressure</span>
+                <div onclick="openWidgetDetail('pressure')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Pressure</span>
+                        <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    </div>
                     <div id="metric-pressure" class="text-xl font-extrabold font-mono mt-2">--</div>
-                    <span id="metric-precip-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Precip -- mm</span>
+                    <span id="metric-precip-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Surface -- hPa</span>
                 </div>
 
-                <div class="glass-panel rounded-3xl p-4 flex flex-col justify-between">
-                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Sun Cycle</span>
+                <div onclick="openWidgetDetail('sun')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                    <div class="flex items-center justify-between gap-1">
+                        <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Sun Cycle</span>
+                        <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                    </div>
                     <div id="metric-sunrise" class="text-sm font-extrabold font-mono mt-2">↑ --:--</div>
                     <span id="metric-sunset" class="text-xs font-mono text-[var(--text-muted)] mt-1">↓ --:--</span>
                 </div>
             </section>
         </div>
 
+        <!-- EXTENDED TELEMETRY ROW (6 MORE CLICKABLE WIDGETS) -->
+        <section class="relative z-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div onclick="openWidgetDetail('visibility')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Visibility</span>
+                    <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </div>
+                <div id="metric-visibility" class="text-lg font-extrabold font-mono mt-2">-- km</div>
+                <span id="metric-visibility-sub" class="text-[11px] text-[var(--text-muted)] mt-1">--</span>
+            </div>
+
+            <div onclick="openWidgetDetail('precip')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Precip &amp; Snow</span>
+                    <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </div>
+                <div id="metric-precip-total" class="text-lg font-extrabold font-mono mt-2">-- mm</div>
+                <span id="metric-snow-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Snow -- cm</span>
+            </div>
+
+            <div onclick="openWidgetDetail('clouds')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Cloud Layers</span>
+                    <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </div>
+                <div id="metric-clouds-total" class="text-lg font-extrabold font-mono mt-2">--%</div>
+                <span id="metric-clouds-sub" class="text-[11px] text-[var(--text-muted)] mt-1">L/M/H --</span>
+            </div>
+
+            <div onclick="openWidgetDetail('comfort')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Thermal Feel</span>
+                    <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </div>
+                <div id="metric-feels" class="text-lg font-extrabold font-mono mt-2">--°</div>
+                <span id="metric-feels-sub" class="text-[11px] text-[var(--text-muted)] mt-1">--</span>
+            </div>
+
+            <div onclick="openWidgetDetail('stability')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Storm Energy</span>
+                    <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </div>
+                <div id="metric-cape" class="text-lg font-extrabold font-mono mt-2">-- J/kg</div>
+                <span id="metric-cape-sub" class="text-[11px] text-[var(--text-muted)] mt-1">CAPE index</span>
+            </div>
+
+            <div onclick="openWidgetDetail('ground')" role="button" tabindex="0" class="group glass-panel widget-clickable rounded-3xl p-4 flex flex-col justify-between">
+                <div class="flex items-center justify-between gap-1">
+                    <span class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Surface &amp; Frost</span>
+                    <span class="text-[10px] font-mono text-sky-500 opacity-0 group-hover:opacity-100 transition-opacity">↗</span>
+                </div>
+                <div id="metric-soil-temp" class="text-lg font-extrabold font-mono mt-2">--°</div>
+                <span id="metric-soil-sub" class="text-[11px] text-[var(--text-muted)] mt-1">Moisture --%</span>
+            </div>
+        </section>
+
+        <!-- INTERACTIVE MULTI-METRIC FORECAST CHART -->
+        <section class="relative z-10 glass-panel rounded-3xl p-5 sm:p-6 space-y-4">
+            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-sm font-extrabold uppercase tracking-wider text-[var(--text-muted)]">Interactive Forecast Trends</h3>
+                        <span id="chart-badge-label" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/15 text-sky-500 font-bold">Temperature &amp; Feels Like</span>
+                    </div>
+                    <p id="chart-stats-summary" class="text-xs font-mono text-[var(--text-subtle)] mt-1">Loading chart telemetry...</p>
+                </div>
+
+                <!-- Time Horizon Switcher -->
+                <div class="inline-flex flex-wrap items-center gap-1 p-1 rounded-2xl glass-subcard self-start">
+                    <button type="button" data-range="24h" onclick="setChartRange('24h')" class="chart-range-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-sky-500 text-white">Next 24h</button>
+                    <button type="button" data-range="48h" onclick="setChartRange('48h')" class="chart-range-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-[var(--text-muted)] hover:text-[var(--text-main)]">48 Hours</button>
+                    <button type="button" data-range="7d_hourly" onclick="setChartRange('7d_hourly')" class="chart-range-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-[var(--text-muted)] hover:text-[var(--text-main)]">7 Days (Hourly)</button>
+                    <button type="button" data-range="7d_daily" onclick="setChartRange('7d_daily')" class="chart-range-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-[var(--text-muted)] hover:text-[var(--text-main)]">7-Day Daily</button>
+                </div>
+            </div>
+
+            <!-- Metric Selector Tabs -->
+            <div class="flex flex-wrap items-center gap-1.5">
+                <button type="button" data-metric="temp" onclick="setChartMetric('temp')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all bg-sky-500 text-white">Temperature</button>
+                <button type="button" data-metric="wind" onclick="setChartMetric('wind')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard">Wind &amp; Gusts</button>
+                <button type="button" data-metric="humidity" onclick="setChartMetric('humidity')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard">Humidity &amp; Dew Point</button>
+                <button type="button" data-metric="precip" onclick="setChartMetric('precip')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard">Precipitation &amp; Snow</button>
+                <button type="button" data-metric="pressure" onclick="setChartMetric('pressure')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard">Pressure &amp; Clouds</button>
+                <button type="button" data-metric="uv" onclick="setChartMetric('uv')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard">UV &amp; Solar Radiation</button>
+                <button type="button" data-metric="aqi" onclick="setChartMetric('aqi')" class="chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard">Air Quality &amp; Visibility</button>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="glass-subcard rounded-2xl p-3 sm:p-4 relative h-[270px] sm:h-[310px] w-full">
+                <canvas id="forecast-trend-chart"></canvas>
+            </div>
+        </section>
+
         <!-- HOURLY FORECAST STRIP -->
         <section class="relative z-10 glass-panel rounded-3xl p-5 space-y-3">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-[var(--text-muted)]">Next 24 Hours</h3>
-                <span class="text-[11px] text-[var(--text-subtle)]">Hourly temperature &amp; precipitation chance</span>
+                <span class="text-[11px] text-[var(--text-subtle)]">Click any hour for full telemetry</span>
             </div>
             <div id="hourly-strip" class="flex items-stretch gap-2.5 overflow-x-auto pb-2"></div>
         </section>
@@ -342,17 +552,48 @@
         <section class="relative z-10 glass-panel rounded-3xl p-5 sm:p-6 space-y-3">
             <div class="flex items-center justify-between">
                 <h3 class="text-sm font-extrabold uppercase tracking-wider text-[var(--text-muted)]">7-Day Outlook</h3>
-                <span class="text-[11px] text-[var(--text-subtle)]">Daily highs, lows &amp; precipitation</span>
+                <span class="text-[11px] text-[var(--text-subtle)]">Click any day for full breakdown</span>
             </div>
             <div id="daily-list" class="space-y-2"></div>
         </section>
 
     </div>
 
+    <!-- WIDGET DETAILS MODAL -->
+    <div id="widget-detail-backdrop" onclick="closeWidgetDetail()" class="hidden fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+        <div id="widget-detail-modal" onclick="event.stopPropagation()" class="w-full max-w-[560px] max-h-[88vh] rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-4 border-b border-[var(--glass-border)] flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 min-w-0">
+                    <div id="detail-modal-icon" class="w-10 h-10 rounded-2xl glass-subcard flex items-center justify-center text-sky-500 flex-shrink-0"></div>
+                    <div class="min-w-0">
+                        <h3 id="detail-modal-title" class="text-base font-extrabold tracking-tight truncate">Weather Details</h3>
+                        <p id="detail-modal-subtitle" class="text-[11px] text-[var(--text-subtle)] truncate">--</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeWidgetDetail()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-rose-500 transition-colors flex-shrink-0" title="Close">
+                    ×
+                </button>
+            </div>
+
+            <div id="detail-modal-body" class="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm"></div>
+
+            <div class="px-5 py-3.5 border-t border-[var(--glass-border)] flex items-center justify-between gap-2 bg-sky-500/5">
+                <button type="button" id="detail-ask-ai-btn" onclick="askAiFromDetailModal()" class="px-3.5 py-2 rounded-2xl bg-sky-500/15 border border-sky-500/35 text-sky-500 dark:text-sky-300 text-xs font-bold hover:bg-sky-500/25 transition-colors flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 3l1.9 5.8a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3Z"></path>
+                    </svg>
+                    <span>Ask Weather AI about this</span>
+                </button>
+                <button type="button" onclick="closeWidgetDetail()" class="glass-subcard px-4 py-2 rounded-2xl text-xs font-bold hover:border-sky-500/50 transition-colors">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- WEATHER AI ASSISTANT SLIDE-OVER DRAWER -->
     <div id="weather-ai-backdrop" onclick="closeWeatherAiDrawer()" class="hidden fixed inset-0 z-40 bg-slate-950/50 backdrop-blur-sm transition-opacity"></div>
     <aside id="weather-ai-drawer" class="hidden fixed top-3 right-3 bottom-3 w-[calc(100vw-24px)] max-w-[440px] z-50 rounded-3xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-[var(--glass-border)] shadow-2xl flex flex-col overflow-hidden">
-        <!-- Drawer Header -->
         <div class="px-5 py-4 border-b border-[var(--glass-border)] flex items-center justify-between gap-2">
             <div class="flex items-center gap-2.5 min-w-0">
                 <div class="w-9 h-9 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center flex-shrink-0">
@@ -366,16 +607,15 @@
                 </div>
             </div>
             <div class="flex items-center gap-1.5 flex-shrink-0">
-                <button onclick="resetWeatherAiChat(true)" class="glass-subcard px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-[var(--text-muted)] hover:text-sky-500 transition-colors" title="Summarize & Reset">
+                <button type="button" onclick="resetWeatherAiChat(true)" class="glass-subcard px-2.5 py-1.5 rounded-xl text-[11px] font-semibold text-[var(--text-muted)] hover:text-sky-500 transition-colors" title="Summarize & Reset">
                     Summarize
                 </button>
-                <button onclick="closeWeatherAiDrawer()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-rose-500 transition-colors" title="Close">
+                <button type="button" onclick="closeWeatherAiDrawer()" class="glass-subcard w-8 h-8 rounded-xl flex items-center justify-center text-[var(--text-muted)] hover:text-rose-500 transition-colors" title="Close">
                     ×
                 </button>
             </div>
         </div>
 
-        <!-- Quick Question Chips -->
         <div class="px-4 py-2.5 border-b border-[var(--glass-border)] flex flex-wrap gap-1.5 bg-sky-500/5">
             <button type="button" onclick="askQuickWeatherQuestion('Summarize today and the 7-day forecast.')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">Summarize forecast</button>
             <button type="button" onclick="askQuickWeatherQuestion('What should I wear today?')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">What to wear?</button>
@@ -383,10 +623,8 @@
             <button type="button" onclick="askQuickWeatherQuestion('How are wind, air quality, and UV today?')" class="glass-subcard px-2.5 py-1 rounded-full text-[11px] font-semibold hover:border-sky-500/50">Wind &amp; AQI</button>
         </div>
 
-        <!-- Chat Messages -->
         <div id="weather-ai-messages" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
 
-        <!-- Chat Input Form -->
         <form onsubmit="submitWeatherAiForm(event)" class="p-3.5 border-t border-[var(--glass-border)] flex items-center gap-2">
             <input id="weather-ai-input" type="text" placeholder="Ask about temperature, rain, weekend..." class="glass-input flex-1 rounded-2xl px-3.5 py-2.5 text-xs" autocomplete="off">
             <button id="weather-ai-send-btn" type="submit" class="px-4 py-2.5 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold transition-colors flex-shrink-0">
@@ -394,6 +632,8 @@
             </button>
         </form>
     </aside>
+    
+
 
     <script>
         let useFahrenheit = localStorage.getItem('homenest_weather_unit') === 'F';
@@ -404,6 +644,12 @@
         let aiChatHistory = [];
         let aiSummarizedPlaceKey = '';
         let aiBusy = false;
+        let activeDetailAiPrompt = '';
+        let activeDetailReopen = null;
+
+        let chartInstance = null;
+        let activeChartMetric = 'temp';
+        let activeChartRange = '24h';
 
         const DEFAULT_SAVED_PLACES = [
             { label: 'Candiac, QC', lat: 45.3834, lon: -73.5166 },
@@ -425,6 +671,7 @@
             const dark = !document.documentElement.classList.contains('dark');
             document.documentElement.classList.toggle('dark', dark);
             try { localStorage.setItem('theme', dark ? 'dark' : 'light'); } catch (e) {}
+            if (lastWeatherPayload) renderForecastChart();
         }
 
         function signOut() {
@@ -436,6 +683,11 @@
             return Math.round(useFahrenheit ? (cVal * 9 / 5) + 32 : cVal);
         }
 
+        function convertTempFloat(cVal) {
+            if (cVal === null || cVal === undefined || isNaN(cVal)) return null;
+            return Number((useFahrenheit ? (cVal * 9 / 5) + 32 : cVal).toFixed(1));
+        }
+
         function fmtTemp(cVal) {
             const n = convertTempNum(cVal);
             return n === null ? '--°' : `${n}°`;
@@ -445,7 +697,13 @@
             useFahrenheit = !useFahrenheit;
             localStorage.setItem('homenest_weather_unit', useFahrenheit ? 'F' : 'C');
             document.getElementById('unit-toggle-btn').textContent = useFahrenheit ? '°F' : '°C';
-            if (lastWeatherPayload) renderWeather(lastWeatherPayload);
+            if (lastWeatherPayload) {
+                renderWeather(lastWeatherPayload);
+                renderForecastChart();
+                if (activeDetailReopen && !document.getElementById('widget-detail-backdrop').classList.contains('hidden')) {
+                    activeDetailReopen();
+                }
+            }
         }
 
         function getSavedPlaces() {
@@ -580,6 +838,46 @@
             return dirs[Math.round(deg / 45) % 8];
         }
 
+        function calcDewPointC(tempC, rh) {
+            if (tempC == null || rh == null || rh <= 0) return null;
+            const a = 17.27;
+            const b = 237.7;
+            const alpha = ((a * tempC) / (b + tempC)) + Math.log(rh / 100);
+            return (b * alpha) / (a - alpha);
+        }
+
+        function beaufortScale(kmh) {
+            const v = kmh || 0;
+            if (v < 2) return ['Force 0 · Calm', 'Smoke rises vertically; mirror-like water.'];
+            if (v < 12) return ['Force 1–2 · Light Breeze', 'Wind felt on face; leaves rustle gently.'];
+            if (v < 29) return ['Force 3–4 · Gentle to Moderate Breeze', 'Leaves and small twigs in constant motion; light flags extend.'];
+            if (v < 50) return ['Force 5–6 · Fresh to Strong Breeze', 'Small trees sway; umbrellas are hard to hold steady.'];
+            if (v < 75) return ['Force 7–8 · Gale', 'Whole trees in motion; noticeable resistance walking into wind.'];
+            return ['Force 9+ · Strong Gale / Storm', 'High wind hazard; secure loose outdoor objects.'];
+        }
+
+        function parseHhMmToMinutes(hhmm) {
+            if (!hhmm || !hhmm.includes(':')) return null;
+            const [h, m] = hhmm.split(':').map(Number);
+            if (isNaN(h) || isNaN(m)) return null;
+            return h * 60 + m;
+        }
+
+        function formatMinutesToHhMm(mins) {
+            const m = ((Math.round(mins) % 1440) + 1440) % 1440;
+            const hh = String(Math.floor(m / 60)).padStart(2, '0');
+            const mm = String(m % 60).padStart(2, '0');
+            return `${hh}:${mm}`;
+        }
+
+        function getCurrentHourIndex(data) {
+            const cur = data.current || {};
+            const hTimes = (data.hourly || {}).time || [];
+            const curIsoHour = (cur.time || '').slice(0, 13);
+            let idx = hTimes.findIndex(t => t.slice(0, 13) >= curIsoHour);
+            return idx < 0 ? 0 : idx;
+        }
+
         async function autoDetectLocation(forceFresh = false) {
             const badge = document.getElementById('detect-source-badge');
             badge.textContent = 'Locating...';
@@ -622,6 +920,7 @@
             document.getElementById('current-condition').textContent = 'Loading forecast...';
             document.getElementById('ai-drawer-city-label').textContent = label;
             renderSavedPlaces();
+            fetchNationalAlerts(currentPlace.lat, currentPlace.lon, label);
 
             try {
                 const url = `/api/weather/forecast?lat=${encodeURIComponent(currentPlace.lat)}&lon=${encodeURIComponent(currentPlace.lon)}&label=${encodeURIComponent(label)}`;
@@ -631,7 +930,9 @@
                 if (data.success) {
                     lastWeatherPayload = data;
                     renderWeather(data);
+                    renderForecastChart();
                     fetchAiBrief(data);
+                    enrichExtendedWeatherData(currentPlace.lat, currentPlace.lon);
                     if (!document.getElementById('weather-ai-drawer').classList.contains('hidden')) {
                         resetWeatherAiChat(true);
                     }
@@ -643,11 +944,69 @@
             }
         }
 
+        /* Seamless Open-Meteo Extended Telemetry Enrichment */
+        async function enrichExtendedWeatherData(lat, lon) {
+            const targetKey = `${lat.toFixed(4)},${lon.toFixed(4)}`;
+            const currentVars = [
+                'temperature_2m', 'relative_humidity_2m', 'apparent_temperature', 'is_day',
+                'precipitation', 'rain', 'showers', 'snowfall', 'weather_code', 'cloud_cover',
+                'pressure_msl', 'surface_pressure', 'wind_speed_10m', 'wind_direction_10m',
+                'wind_gusts_10m', 'dew_point_2m', 'visibility'
+            ].join(',');
+
+            const hourlyVars = [
+                'temperature_2m', 'relative_humidity_2m', 'dew_point_2m', 'apparent_temperature',
+                'precipitation_probability', 'precipitation', 'rain', 'snowfall', 'snow_depth',
+                'weather_code', 'pressure_msl', 'surface_pressure', 'cloud_cover',
+                'cloud_cover_low', 'cloud_cover_mid', 'cloud_cover_high', 'visibility',
+                'evapotranspiration', 'wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m',
+                'uv_index', 'shortwave_radiation', 'cape', 'soil_temperature_0cm',
+                'soil_moisture_0_to_1cm', 'is_day'
+            ].join(',');
+
+            const dailyVars = [
+                'weather_code', 'temperature_2m_max', 'temperature_2m_min',
+                'apparent_temperature_max', 'apparent_temperature_min', 'sunrise', 'sunset',
+                'daylight_duration', 'sunshine_duration', 'uv_index_max', 'precipitation_sum',
+                'rain_sum', 'snowfall_sum', 'precipitation_hours', 'precipitation_probability_max',
+                'wind_speed_10m_max', 'wind_gusts_10m_max', 'wind_direction_10m_dominant',
+                'shortwave_radiation_sum', 'et0_fao_evapotranspiration'
+            ].join(',');
+
+            const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=${currentVars}&hourly=${hourlyVars}&daily=${dailyVars}&timezone=auto&forecast_days=7`;
+            const aqiUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&current=us_aqi,european_aqi,pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,dust&hourly=us_aqi,pm2_5,pm10,ozone&timezone=auto&forecast_days=5`;
+
+            try {
+                const [fRes, aRes] = await Promise.allSettled([fetch(forecastUrl), fetch(aqiUrl)]);
+                if (!currentPlace || `${currentPlace.lat.toFixed(4)},${currentPlace.lon.toFixed(4)}` !== targetKey || !lastWeatherPayload) {
+                    return;
+                }
+
+                if (fRes.status === 'fulfilled' && fRes.value.ok) {
+                    const ext = await fRes.value.json();
+                    lastWeatherPayload.current = Object.assign({}, lastWeatherPayload.current || {}, ext.current || {});
+                    lastWeatherPayload.hourly = Object.assign({}, lastWeatherPayload.hourly || {}, ext.hourly || {});
+                    lastWeatherPayload.daily = Object.assign({}, lastWeatherPayload.daily || {}, ext.daily || {});
+                    if (ext.elevation != null) lastWeatherPayload.elevation = ext.elevation;
+                }
+
+                if (aRes.status === 'fulfilled' && aRes.value.ok) {
+                    const extAqi = await aRes.value.json();
+                    lastWeatherPayload.air_quality = Object.assign({}, lastWeatherPayload.air_quality || {}, extAqi.current || {});
+                    lastWeatherPayload.air_quality_hourly = extAqi.hourly || {};
+                }
+
+                renderWeather(lastWeatherPayload);
+                renderForecastChart();
+            } catch (e) {}
+        }
+
         function renderWeather(data) {
             const cur = data.current || {};
             const daily = data.daily || {};
             const hourly = data.hourly || {};
             const aqi = data.air_quality || {};
+            const nowHIdx = getCurrentHourIndex(data);
 
             const info = describeWmoCode(cur.weather_code, cur.is_day);
             const hi0 = (daily.temperature_2m_max || [])[0];
@@ -657,14 +1016,28 @@
             document.getElementById('current-condition').textContent = info.text;
             document.getElementById('current-feels-hl').textContent = `Feels like ${fmtTemp(cur.apparent_temperature)} · H: ${fmtTemp(hi0)}  L: ${fmtTemp(lo0)}`;
             document.getElementById('current-weather-icon').innerHTML = getWeatherSvg(info.icon, 'w-14 h-14');
-            document.getElementById('weather-coords-meta').textContent = `${currentPlace.lat.toFixed(4)}, ${currentPlace.lon.toFixed(4)} · Timezone: ${data.timezone || 'Auto'}`;
 
-            // Metrics
+            const elevStr = data.elevation != null ? ` · Elev ${Math.round(data.elevation)}m` : '';
+            document.getElementById('weather-coords-meta').textContent = `${currentPlace.lat.toFixed(4)}, ${currentPlace.lon.toFixed(4)}${elevStr} · ${data.timezone || 'Auto'}`;
+
+            // Hero status badges
+            const dewC = cur.dew_point_2m != null ? cur.dew_point_2m : calcDewPointC(cur.temperature_2m, cur.relative_humidity_2m);
+            const visKm = cur.visibility != null ? (cur.visibility / 1000) : ((hourly.visibility || [])[nowHIdx] != null ? (hourly.visibility[nowHIdx] / 1000) : null);
+            const solarWm2 = (hourly.shortwave_radiation || [])[nowHIdx];
+            const pills = [];
+            if (dewC != null) pills.push(`Dew ${fmtTemp(dewC)}`);
+            if (visKm != null) pills.push(`Vis ${visKm >= 10 ? Math.round(visKm) : visKm.toFixed(1)} km`);
+            if (solarWm2 != null) pills.push(`Solar ${Math.round(solarWm2)} W/m²`);
+            document.getElementById('current-extra-pills').innerHTML = pills.map(p =>
+                `<span class="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full glass-subcard text-[var(--text-muted)]">${escapeHtml(p)}</span>`
+            ).join('');
+
+            // Primary 6 Metrics
             document.getElementById('metric-wind').textContent = `${Math.round(cur.wind_speed_10m || 0)} km/h ${windDirLabel(cur.wind_direction_10m)}`;
             document.getElementById('metric-wind-sub').textContent = `Gusts ${Math.round(cur.wind_gusts_10m || 0)} km/h`;
 
             document.getElementById('metric-humidity').textContent = `${Math.round(cur.relative_humidity_2m || 0)}%`;
-            document.getElementById('metric-cloud-sub').textContent = `Cloud cover ${Math.round(cur.cloud_cover || 0)}%`;
+            document.getElementById('metric-cloud-sub').textContent = `Dew point ${fmtTemp(dewC)}`;
 
             const usAqi = aqi.us_aqi;
             document.getElementById('metric-aqi').textContent = usAqi !== undefined && usAqi !== null ? `${Math.round(usAqi)}` : 'N/A';
@@ -672,47 +1045,99 @@
             document.getElementById('metric-aqi-sub').textContent = `${aqiLabel}${aqi.pm2_5 != null ? ' · PM2.5 ' + aqi.pm2_5.toFixed(1) : ''}`;
 
             const uvMax = (daily.uv_index_max || [])[0];
-            document.getElementById('metric-uv').textContent = uvMax !== undefined ? uvMax.toFixed(1) : '--';
-            document.getElementById('metric-uv-sub').textContent = uvMax == null ? '--' : uvMax < 3 ? 'Low' : uvMax < 6 ? 'Moderate' : uvMax < 8 ? 'High' : 'Very High';
+            document.getElementById('metric-uv').textContent = uvMax !== undefined && uvMax !== null ? uvMax.toFixed(1) : '--';
+            document.getElementById('metric-uv-sub').textContent = solarWm2 != null
+                ? `Solar ${Math.round(solarWm2)} W/m²`
+                : (uvMax == null ? '--' : uvMax < 3 ? 'Low' : uvMax < 6 ? 'Moderate' : uvMax < 8 ? 'High' : 'Very High');
 
             document.getElementById('metric-pressure').textContent = cur.pressure_msl ? `${Math.round(cur.pressure_msl)} hPa` : '--';
-            document.getElementById('metric-precip-sub').textContent = `Current precip ${cur.precipitation ?? 0} mm`;
+            document.getElementById('metric-precip-sub').textContent = cur.surface_pressure
+                ? `Surface ${Math.round(cur.surface_pressure)} hPa`
+                : `Precip ${cur.precipitation ?? 0} mm`;
 
             const sr = ((daily.sunrise || [])[0] || '').split('T')[1] || '--:--';
             const ss = ((daily.sunset || [])[0] || '').split('T')[1] || '--:--';
             document.getElementById('metric-sunrise').textContent = `↑ ${sr}`;
             document.getElementById('metric-sunset').textContent = `↓ ${ss}`;
 
+            // Extended 6 Telemetry Widgets
+            document.getElementById('metric-visibility').textContent = visKm != null ? `${visKm >= 10 ? visKm.toFixed(0) : visKm.toFixed(1)} km` : '-- km';
+            document.getElementById('metric-visibility-sub').textContent = visKm == null ? 'Atmospheric clarity' : visKm >= 10 ? 'Crystal clear' : visKm >= 4 ? 'Light haze' : 'Reduced visibility';
+
+            const precipSum0 = (daily.precipitation_sum || [])[0];
+            const snowSum0 = (daily.snowfall_sum || [])[0];
+            document.getElementById('metric-precip-total').textContent = precipSum0 != null ? `${precipSum0.toFixed(1)} mm` : `${cur.precipitation ?? 0} mm`;
+            document.getElementById('metric-snow-sub').textContent = snowSum0 != null && snowSum0 > 0
+                ? `Snow ${snowSum0.toFixed(1)} cm today`
+                : `Now ${cur.precipitation ?? 0} mm/h`;
+
+            const cTotal = Math.round(cur.cloud_cover || 0);
+            const cLow = (hourly.cloud_cover_low || [])[nowHIdx];
+            const cMid = (hourly.cloud_cover_mid || [])[nowHIdx];
+            const cHigh = (hourly.cloud_cover_high || [])[nowHIdx];
+            document.getElementById('metric-clouds-total').textContent = `${cTotal}%`;
+            document.getElementById('metric-clouds-sub').textContent = (cLow != null && cMid != null && cHigh != null)
+                ? `L:${Math.round(cLow)}% M:${Math.round(cMid)}% H:${Math.round(cHigh)}%`
+                : 'Total sky cover';
+
+            document.getElementById('metric-feels').textContent = fmtTemp(cur.apparent_temperature);
+            const diffC = (cur.apparent_temperature != null && cur.temperature_2m != null) ? (cur.apparent_temperature - cur.temperature_2m) : 0;
+            const diffDisplay = Math.round(useFahrenheit ? diffC * 9 / 5 : diffC);
+            document.getElementById('metric-feels-sub').textContent = diffDisplay === 0
+                ? 'Matches air temp'
+                : diffDisplay > 0 ? `+${diffDisplay}° warmer feel` : `${diffDisplay}° wind chill`;
+
+            const capeVal = (hourly.cape || [])[nowHIdx];
+            document.getElementById('metric-cape').textContent = capeVal != null ? `${Math.round(capeVal)} J/kg` : '-- J/kg';
+            document.getElementById('metric-cape-sub').textContent = capeVal == null ? 'Convective energy'
+                : capeVal < 100 ? 'Stable atmosphere' : capeVal < 1000 ? 'Marginal instability' : 'Convective storm risk';
+
+            const soilT = (hourly.soil_temperature_0cm || [])[nowHIdx];
+            const soilM = (hourly.soil_moisture_0_to_1cm || [])[nowHIdx];
+            document.getElementById('metric-soil-temp').textContent = soilT != null ? fmtTemp(soilT) : '--°';
+            document.getElementById('metric-soil-sub').textContent = soilM != null
+                ? `Moisture ${Math.round(soilM * 100)}%${soilT != null && soilT <= 0 ? ' · Frost risk' : ''}`
+                : 'Ground surface';
+
             // Hourly (next 24 hours starting near current time)
             const hTimes = hourly.time || [];
-            const curIsoHour = (cur.time || '').slice(0, 13);
-            let startIdx = hTimes.findIndex(t => t.slice(0, 13) >= curIsoHour);
-            if (startIdx < 0) startIdx = 0;
+            const hCodes = hourly.weather_code || [];
+            const hTemps = hourly.temperature_2m || [];
+            const hIsDay = hourly.is_day || [];
+            const hPops = hourly.precipitation_probability || [];
+            const hWinds = hourly.wind_speed_10m || [];
 
+            const startIdx = nowHIdx;
             const strip = document.getElementById('hourly-strip');
             const sliceEnd = Math.min(startIdx + 24, hTimes.length);
             let hourlyHtml = '';
             for (let i = startIdx; i < sliceEnd; i++) {
                 const tStr = i === startIdx ? 'Now' : hTimes[i].slice(11, 16);
-                const hInfo = describeWmoCode(hourly.weather_code[i], hourly.is_day ? hourly.is_day[i] : 1);
-                const pop = hourly.precipitation_probability ? hourly.precipitation_probability[i] : 0;
+                const hInfo = describeWmoCode(hCodes[i], hIsDay[i] !== undefined ? hIsDay[i] : 1);
+                const pop = hPops[i] || 0;
+                const wSpd = hWinds[i] != null ? Math.round(hWinds[i]) : null;
                 hourlyHtml += `
-                    <div class="glass-subcard rounded-2xl px-3.5 py-3 min-w-[78px] flex flex-col items-center justify-between gap-2 text-center ${i === startIdx ? 'border-sky-500/50 bg-sky-500/10' : ''}">
+                    <button type="button" onclick="openHourlyDetail(${i})" class="glass-subcard widget-clickable rounded-2xl px-3.5 py-3 min-w-[84px] flex flex-col items-center justify-between gap-1.5 text-center ${i === startIdx ? 'border-sky-500/50 bg-sky-500/10' : ''}">
                         <span class="text-[11px] font-mono font-semibold text-[var(--text-muted)]">${tStr}</span>
                         ${getWeatherSvg(hInfo.icon, 'w-6 h-6')}
-                        <span class="text-sm font-extrabold font-mono">${fmtTemp(hourly.temperature_2m[i])}</span>
+                        <span class="text-sm font-extrabold font-mono">${fmtTemp(hTemps[i])}</span>
                         <span class="text-[10px] font-mono ${pop >= 25 ? 'text-sky-400 font-bold' : 'text-[var(--text-subtle)]'}">${pop ? pop + '%' : '—'}</span>
-                    </div>
+                        ${wSpd != null ? `<span class="text-[9px] font-mono text-[var(--text-subtle)]">${wSpd} km/h</span>` : ''}
+                    </button>
                 `;
             }
             strip.innerHTML = hourlyHtml;
 
             // 7-Day Forecast
             const dTimes = daily.time || [];
+            const dCodes = daily.weather_code || [];
             const allMins = daily.temperature_2m_min || [];
             const allMaxs = daily.temperature_2m_max || [];
-            const weekMin = Math.min(...allMins);
-            const weekMax = Math.max(...allMaxs);
+            const dPops = daily.precipitation_probability_max || [];
+            const dPrecip = daily.precipitation_sum || [];
+            const dWindMax = daily.wind_speed_10m_max || [];
+            const weekMin = allMins.length ? Math.min(...allMins) : 0;
+            const weekMax = allMaxs.length ? Math.max(...allMaxs) : 1;
             const span = Math.max(weekMax - weekMin, 1);
 
             const dailyList = document.getElementById('daily-list');
@@ -720,20 +1145,26 @@
                 const [y, m, d] = dStr.split('-').map(Number);
                 const dt = new Date(y, m - 1, d, 12, 0, 0);
                 const dayLabel = idx === 0 ? 'Today' : dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                const dInfo = describeWmoCode(daily.weather_code[idx], 1);
-                const pop = (daily.precipitation_probability_max || [])[idx] || 0;
+                const dInfo = describeWmoCode(dCodes[idx], 1);
+                const pop = dPops[idx] || 0;
+                const pMm = dPrecip[idx];
+                const wMax = dWindMax[idx];
                 const dMin = allMins[idx];
                 const dMax = allMaxs[idx];
-                const leftPct = ((dMin - weekMin) / span) * 100;
-                const widthPct = Math.max(((dMax - dMin) / span) * 100, 8);
+                const leftPct = dMin != null ? ((dMin - weekMin) / span) * 100 : 0;
+                const widthPct = (dMin != null && dMax != null) ? Math.max(((dMax - dMin) / span) * 100, 8) : 20;
 
                 return `
-                    <div class="glass-subcard rounded-2xl px-4 py-3 grid grid-cols-[115px_36px_48px_1fr] sm:grid-cols-[150px_42px_130px_1fr] items-center gap-3">
+                    <div onclick="openDailyDetail(${idx})" role="button" tabindex="0" class="glass-subcard widget-clickable rounded-2xl px-4 py-3 grid grid-cols-[110px_34px_54px_1fr] sm:grid-cols-[145px_38px_190px_85px_1fr] items-center gap-3">
                         <span class="text-xs sm:text-sm font-bold">${dayLabel}</span>
                         <div class="flex justify-center">${getWeatherSvg(dInfo.icon, 'w-5 h-5')}</div>
                         <div class="text-xs text-[var(--text-muted)] truncate">
                             <span class="hidden sm:inline">${dInfo.text}</span>
                             ${pop >= 20 ? `<span class="text-sky-400 font-mono font-bold ml-1">${pop}%</span>` : ''}
+                            ${pMm != null && pMm >= 0.5 ? `<span class="hidden md:inline text-[10px] font-mono text-[var(--text-subtle)] ml-1">(${pMm.toFixed(1)}mm)</span>` : ''}
+                        </div>
+                        <div class="hidden sm:block text-[11px] font-mono text-[var(--text-subtle)] text-right">
+                            ${wMax != null ? `💨 ${Math.round(wMax)} km/h` : ''}
                         </div>
                         <div class="flex items-center gap-2.5">
                             <span class="text-xs font-mono text-[var(--text-subtle)] w-9 text-right">${fmtTemp(dMin)}</span>
@@ -745,6 +1176,1113 @@
                     </div>
                 `;
             }).join('');
+        }
+
+        /* INTERACTIVE MULTI-METRIC CHART (CHART.JS) */
+        function setChartMetric(metric) {
+            activeChartMetric = metric;
+            document.querySelectorAll('.chart-metric-btn').forEach(btn => {
+                const active = btn.dataset.metric === metric;
+                btn.className = active
+                    ? 'chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all bg-sky-500 text-white'
+                    : 'chart-metric-btn px-3 py-1.5 rounded-full text-xs font-bold transition-all glass-subcard';
+            });
+            renderForecastChart();
+        }
+
+        function setChartRange(range) {
+            activeChartRange = range;
+            document.querySelectorAll('.chart-range-btn').forEach(btn => {
+                const active = btn.dataset.range === range;
+                btn.className = active
+                    ? 'chart-range-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-sky-500 text-white'
+                    : 'chart-range-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all text-[var(--text-muted)] hover:text-[var(--text-main)]';
+            });
+            renderForecastChart();
+        }
+
+        function calcSeriesStats(arr, suffix = '') {
+            const valid = (arr || []).filter(v => v !== null && v !== undefined && !isNaN(v));
+            if (!valid.length) return 'No data available for this metric yet';
+            const min = Math.min(...valid);
+            const max = Math.max(...valid);
+            const avg = valid.reduce((a, b) => a + b, 0) / valid.length;
+            const fmt = (n) => Math.abs(n) >= 100 ? Math.round(n) : Number(n.toFixed(1));
+            return `Min: ${fmt(min)}${suffix}  ·  Avg: ${fmt(avg)}${suffix}  ·  Peak: ${fmt(max)}${suffix}`;
+        }
+
+        function renderForecastChart() {
+            const canvas = document.getElementById('forecast-trend-chart');
+            if (!canvas || !lastWeatherPayload || typeof Chart === 'undefined') return;
+
+            const data = lastWeatherPayload;
+            const hourly = data.hourly || {};
+            const daily = data.daily || {};
+            const aqiHourly = data.air_quality_hourly || {};
+            const unitSym = useFahrenheit ? '°F' : '°C';
+            const isDark = document.documentElement.classList.contains('dark');
+            const textColor = isDark ? '#cbd5e1' : '#475569';
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(15, 23, 42, 0.08)';
+
+            const isDailyMode = activeChartRange === '7d_daily';
+            let labels = [];
+            let datasets = [];
+            let badgeText = '';
+            let statsText = '';
+            let y1Title = '';
+            let y2Title = '';
+            let hasRightAxis = false;
+
+            if (!isDailyMode) {
+                const hTimes = hourly.time || [];
+                const startIdx = getCurrentHourIndex(data);
+                const count = activeChartRange === '24h' ? 24 : activeChartRange === '48h' ? 48 : hTimes.length - startIdx;
+                const endIdx = Math.min(startIdx + Math.max(count, 1), hTimes.length);
+
+                const sliceArr = (arr, mapper = (v) => v) => {
+                    const out = [];
+                    for (let i = startIdx; i < endIdx; i++) {
+                        const val = arr ? arr[i] : null;
+                        out.push(val == null ? null : mapper(val, i));
+                    }
+                    return out;
+                };
+
+                for (let i = startIdx; i < endIdx; i++) {
+                    const iso = hTimes[i] || '';
+                    if (activeChartRange === '24h') {
+                        labels.push(i === startIdx ? 'Now' : iso.slice(11, 16));
+                    } else {
+                        const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+                        const dt = new Date(y, m - 1, d, 12, 0, 0);
+                        const wk = dt.toLocaleDateString('en-US', { weekday: 'short' });
+                        labels.push(`${wk} ${iso.slice(11, 16)}`);
+                    }
+                }
+
+                if (activeChartMetric === 'temp') {
+                    badgeText = `Temperature & Feels Like (${unitSym})`;
+                    const temps = sliceArr(hourly.temperature_2m, convertTempFloat);
+                    const feels = sliceArr(hourly.apparent_temperature, convertTempFloat);
+                    const pops = sliceArr(hourly.precipitation_probability);
+                    statsText = calcSeriesStats(temps, unitSym);
+                    y1Title = unitSym;
+                    y2Title = 'Precip %';
+                    hasRightAxis = true;
+                    datasets = [
+                        {
+                            label: `Temperature (${unitSym})`,
+                            data: temps,
+                            borderColor: '#38bdf8',
+                            backgroundColor: 'rgba(56, 189, 248, 0.16)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointRadius: activeChartRange === '7d_hourly' ? 0 : 2.5,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: `Feels Like (${unitSym})`,
+                            data: feels,
+                            borderColor: '#f59e0b',
+                            borderDash: [5, 4],
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Precip Chance (%)',
+                            data: pops,
+                            borderColor: 'rgba(99, 102, 241, 0.65)',
+                            backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                            type: 'bar',
+                            borderRadius: 4,
+                            yAxisID: 'y1',
+                        },
+                    ];
+                } else if (activeChartMetric === 'wind') {
+                    badgeText = 'Wind Speed & Peak Gusts (km/h)';
+                    const wind = sliceArr(hourly.wind_speed_10m, v => Math.round(v));
+                    const gusts = sliceArr(hourly.wind_gusts_10m, v => Math.round(v));
+                    statsText = calcSeriesStats(wind, ' km/h') + (gusts.some(v => v != null) ? `  |  Max Gust: ${Math.max(...gusts.filter(v => v != null))} km/h` : '');
+                    y1Title = 'km/h';
+                    datasets = [
+                        {
+                            label: 'Wind Speed (km/h)',
+                            data: wind,
+                            borderColor: '#0ea5e9',
+                            backgroundColor: 'rgba(14, 165, 233, 0.18)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointRadius: activeChartRange === '7d_hourly' ? 0 : 2.5,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Wind Gusts (km/h)',
+                            data: gusts,
+                            borderColor: '#f43f5e',
+                            borderDash: [5, 4],
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y',
+                        },
+                    ];
+                } else if (activeChartMetric === 'humidity') {
+                    badgeText = `Relative Humidity (%) & Dew Point (${unitSym})`;
+                    const rh = sliceArr(hourly.relative_humidity_2m, v => Math.round(v));
+                    const dew = labels.map((_, offset) => {
+                        const i = startIdx + offset;
+                        const dRaw = hourly.dew_point_2m ? hourly.dew_point_2m[i] : calcDewPointC((hourly.temperature_2m || [])[i], (hourly.relative_humidity_2m || [])[i]);
+                        return convertTempFloat(dRaw);
+                    });
+                    statsText = calcSeriesStats(rh, '%');
+                    y1Title = 'Humidity %';
+                    y2Title = `Dew Point (${unitSym})`;
+                    hasRightAxis = true;
+                    datasets = [
+                        {
+                            label: 'Humidity (%)',
+                            data: rh,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.18)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointRadius: activeChartRange === '7d_hourly' ? 0 : 2.5,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: `Dew Point (${unitSym})`,
+                            data: dew,
+                            borderColor: '#38bdf8',
+                            borderDash: [4, 4],
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y1',
+                        },
+                    ];
+                } else if (activeChartMetric === 'precip') {
+                    badgeText = 'Precipitation (mm), Snowfall (cm) & Probability (%)';
+                    const precip = sliceArr(hourly.precipitation, v => Number(v.toFixed(2)));
+                    const snow = sliceArr(hourly.snowfall, v => Number(v.toFixed(2)));
+                    const pops = sliceArr(hourly.precipitation_probability);
+                    const totalMm = precip.filter(v => v != null).reduce((a, b) => a + b, 0);
+                    statsText = `Window Total: ${totalMm.toFixed(1)} mm  ·  Peak Chance: ${Math.max(0, ...pops.filter(v => v != null))}%`;
+                    y1Title = 'mm / cm';
+                    y2Title = 'Prob %';
+                    hasRightAxis = true;
+                    datasets = [
+                        {
+                            label: 'Precipitation (mm)',
+                            data: precip,
+                            type: 'bar',
+                            backgroundColor: 'rgba(56, 189, 248, 0.65)',
+                            borderRadius: 4,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Snowfall (cm)',
+                            data: snow,
+                            type: 'bar',
+                            backgroundColor: 'rgba(165, 243, 252, 0.8)',
+                            borderRadius: 4,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Probability (%)',
+                            data: pops,
+                            borderColor: '#818cf8',
+                            tension: 0.3,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y1',
+                        },
+                    ];
+                } else if (activeChartMetric === 'pressure') {
+                    badgeText = 'Sea-Level Pressure (hPa) & Cloud Cover (%)';
+                    const press = sliceArr(hourly.pressure_msl, v => Math.round(v));
+                    const clouds = sliceArr(hourly.cloud_cover, v => Math.round(v));
+                    statsText = calcSeriesStats(press, ' hPa');
+                    y1Title = 'Pressure (hPa)';
+                    y2Title = 'Clouds (%)';
+                    hasRightAxis = true;
+                    datasets = [
+                        {
+                            label: 'Pressure (hPa)',
+                            data: press,
+                            borderColor: '#818cf8',
+                            backgroundColor: 'rgba(129, 140, 248, 0.14)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointRadius: activeChartRange === '7d_hourly' ? 0 : 2.5,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Cloud Cover (%)',
+                            data: clouds,
+                            borderColor: '#94a3b8',
+                            borderDash: [4, 4],
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y1',
+                        },
+                    ];
+                } else if (activeChartMetric === 'uv') {
+                    badgeText = 'UV Index & Shortwave Solar Radiation (W/m²)';
+                    const uv = sliceArr(hourly.uv_index, v => Number(v.toFixed(1)));
+                    const solar = sliceArr(hourly.shortwave_radiation, v => Math.round(v));
+                    statsText = calcSeriesStats(uv, ' UV') + (solar.some(v => v != null) ? `  |  Peak Solar: ${Math.max(...solar.filter(v => v != null))} W/m²` : '');
+                    y1Title = 'UV Index';
+                    y2Title = 'Solar (W/m²)';
+                    hasRightAxis = true;
+                    datasets = [
+                        {
+                            label: 'UV Index',
+                            data: uv,
+                            borderColor: '#f59e0b',
+                            backgroundColor: 'rgba(245, 158, 11, 0.18)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointRadius: activeChartRange === '7d_hourly' ? 0 : 2.5,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Solar Radiation (W/m²)',
+                            data: solar,
+                            borderColor: '#f97316',
+                            borderDash: [4, 4],
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y1',
+                        },
+                    ];
+                } else if (activeChartMetric === 'aqi') {
+                    badgeText = 'US Air Quality Index (AQI) & Visibility (km)';
+                    const aqiArr = sliceArr(aqiHourly.us_aqi, v => Math.round(v));
+                    const visArr = sliceArr(hourly.visibility, v => Number((v / 1000).toFixed(1)));
+                    statsText = aqiArr.some(v => v != null) ? calcSeriesStats(aqiArr, ' AQI') : calcSeriesStats(visArr, ' km visibility');
+                    y1Title = 'US AQI';
+                    y2Title = 'Visibility (km)';
+                    hasRightAxis = true;
+                    datasets = [
+                        {
+                            label: 'US AQI',
+                            data: aqiArr,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.18)',
+                            fill: true,
+                            tension: 0.35,
+                            borderWidth: 2.5,
+                            pointRadius: activeChartRange === '7d_hourly' ? 0 : 2.5,
+                            yAxisID: 'y',
+                        },
+                        {
+                            label: 'Visibility (km)',
+                            data: visArr,
+                            borderColor: '#38bdf8',
+                            borderDash: [4, 4],
+                            tension: 0.35,
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            yAxisID: 'y1',
+                        },
+                    ];
+                }
+            } else {
+                // 7-Day Daily Mode
+                const dTimes = daily.time || [];
+                labels = dTimes.map((dStr, idx) => {
+                    if (idx === 0) return 'Today';
+                    const [y, m, d] = dStr.split('-').map(Number);
+                    const dt = new Date(y, m - 1, d, 12, 0, 0);
+                    return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                });
+
+                if (activeChartMetric === 'temp') {
+                    badgeText = `7-Day High & Low Temperature (${unitSym})`;
+                    const highs = (daily.temperature_2m_max || []).map(convertTempFloat);
+                    const lows = (daily.temperature_2m_min || []).map(convertTempFloat);
+                    statsText = `Week High: ${Math.max(...highs)}${unitSym}  ·  Week Low: ${Math.min(...lows)}${unitSym}`;
+                    y1Title = unitSym;
+                    datasets = [
+                        { label: `Daily High (${unitSym})`, data: highs, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.16)', fill: true, tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                        { label: `Daily Low (${unitSym})`, data: lows, borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.14)', fill: true, tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                    ];
+                } else if (activeChartMetric === 'wind') {
+                    badgeText = '7-Day Max Wind Speed & Gusts (km/h)';
+                    const wMax = (daily.wind_speed_10m_max || []).map(v => v != null ? Math.round(v) : null);
+                    const gMax = (daily.wind_gusts_10m_max || []).map(v => v != null ? Math.round(v) : null);
+                    statsText = calcSeriesStats(wMax, ' km/h');
+                    y1Title = 'km/h';
+                    datasets = [
+                        { label: 'Max Wind (km/h)', data: wMax, type: 'bar', backgroundColor: 'rgba(14, 165, 233, 0.65)', borderRadius: 6, yAxisID: 'y' },
+                        { label: 'Max Gusts (km/h)', data: gMax, borderColor: '#f43f5e', tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                    ];
+                } else if (activeChartMetric === 'precip') {
+                    badgeText = '7-Day Total Precipitation (mm) & Snowfall (cm)';
+                    const pSum = (daily.precipitation_sum || []).map(v => v != null ? Number(v.toFixed(1)) : 0);
+                    const sSum = (daily.snowfall_sum || []).map(v => v != null ? Number(v.toFixed(1)) : 0);
+                    const pProb = daily.precipitation_probability_max || [];
+                    statsText = `7-Day Precip Total: ${pSum.reduce((a, b) => a + b, 0).toFixed(1)} mm  ·  Snow Total: ${sSum.reduce((a, b) => a + b, 0).toFixed(1)} cm`;
+                    y1Title = 'mm / cm';
+                    y2Title = 'Max Prob %';
+                    hasRightAxis = true;
+                    datasets = [
+                        { label: 'Precip Sum (mm)', data: pSum, type: 'bar', backgroundColor: 'rgba(56, 189, 248, 0.7)', borderRadius: 6, yAxisID: 'y' },
+                        { label: 'Snow Sum (cm)', data: sSum, type: 'bar', backgroundColor: 'rgba(165, 243, 252, 0.85)', borderRadius: 6, yAxisID: 'y' },
+                        { label: 'Max Precip Chance (%)', data: pProb, borderColor: '#818cf8', tension: 0.3, borderWidth: 2.5, yAxisID: 'y1' },
+                    ];
+                } else if (activeChartMetric === 'uv') {
+                    badgeText = '7-Day Max UV Index & Sunshine Hours';
+                    const uvs = (daily.uv_index_max || []).map(v => v != null ? Number(v.toFixed(1)) : null);
+                    const sunHrs = (daily.sunshine_duration || []).map(s => s != null ? Number((s / 3600).toFixed(1)) : null);
+                    statsText = calcSeriesStats(uvs, ' UV');
+                    y1Title = 'UV Index';
+                    y2Title = 'Sunshine (hrs)';
+                    hasRightAxis = true;
+                    datasets = [
+                        { label: 'Max UV Index', data: uvs, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.2)', fill: true, tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                        { label: 'Sunshine Duration (hrs)', data: sunHrs, type: 'bar', backgroundColor: 'rgba(250, 204, 21, 0.45)', borderRadius: 6, yAxisID: 'y1' },
+                    ];
+                } else {
+                    // Daily aggregated humidity / pressure / visibility from hourly
+                    const hTimes = hourly.time || [];
+                    const dailyAvgFor = (arr, mapper = v => v) => dTimes.map(dayIso => {
+                        const vals = [];
+                        for (let i = 0; i < hTimes.length; i++) {
+                            if (hTimes[i] && hTimes[i].startsWith(dayIso) && arr && arr[i] != null) {
+                                vals.push(mapper(arr[i]));
+                            }
+                        }
+                        if (!vals.length) return null;
+                        return Number((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1));
+                    });
+
+                    if (activeChartMetric === 'humidity') {
+                        badgeText = '7-Day Daily Avg Humidity (%) & Dew Point';
+                        const rhAvg = dailyAvgFor(hourly.relative_humidity_2m);
+                        const dewAvg = dailyAvgFor(hourly.dew_point_2m, convertTempFloat);
+                        statsText = calcSeriesStats(rhAvg, '%');
+                        y1Title = 'Humidity %';
+                        y2Title = `Dew (${unitSym})`;
+                        hasRightAxis = true;
+                        datasets = [
+                            { label: 'Avg Humidity (%)', data: rhAvg, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.18)', fill: true, tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                            { label: `Avg Dew Point (${unitSym})`, data: dewAvg, borderColor: '#38bdf8', tension: 0.3, borderWidth: 2, yAxisID: 'y1' },
+                        ];
+                    } else if (activeChartMetric === 'pressure') {
+                        badgeText = '7-Day Daily Avg Pressure (hPa) & Cloud Cover (%)';
+                        const pAvg = dailyAvgFor(hourly.pressure_msl);
+                        const cAvg = dailyAvgFor(hourly.cloud_cover);
+                        statsText = calcSeriesStats(pAvg, ' hPa');
+                        y1Title = 'hPa';
+                        y2Title = 'Clouds %';
+                        hasRightAxis = true;
+                        datasets = [
+                            { label: 'Avg Pressure (hPa)', data: pAvg, borderColor: '#818cf8', tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                            { label: 'Avg Cloud Cover (%)', data: cAvg, type: 'bar', backgroundColor: 'rgba(148, 163, 184, 0.35)', borderRadius: 6, yAxisID: 'y1' },
+                        ];
+                    } else {
+                        badgeText = '7-Day Avg Visibility (km)';
+                        const vAvg = dailyAvgFor(hourly.visibility, v => v / 1000);
+                        statsText = calcSeriesStats(vAvg, ' km');
+                        y1Title = 'km';
+                        datasets = [
+                            { label: 'Avg Visibility (km)', data: vAvg, borderColor: '#38bdf8', backgroundColor: 'rgba(56, 189, 248, 0.18)', fill: true, tension: 0.3, borderWidth: 2.5, yAxisID: 'y' },
+                        ];
+                    }
+                }
+            }
+
+            document.getElementById('chart-badge-label').textContent = badgeText;
+            document.getElementById('chart-stats-summary').textContent = statsText;
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            const scales = {
+                x: {
+                    ticks: { color: textColor, maxRotation: 0, autoSkipPadding: 14, font: { family: 'JetBrains Mono', size: 10 } },
+                    grid: { color: gridColor, drawBorder: false },
+                },
+                y: {
+                    position: 'left',
+                    title: { display: Boolean(y1Title), text: y1Title, color: textColor, font: { size: 10, weight: 'bold' } },
+                    ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } },
+                    grid: { color: gridColor, drawBorder: false },
+                },
+            };
+
+            if (hasRightAxis) {
+                scales.y1 = {
+                    position: 'right',
+                    title: { display: Boolean(y2Title), text: y2Title, color: textColor, font: { size: 10, weight: 'bold' } },
+                    ticks: { color: textColor, font: { family: 'JetBrains Mono', size: 10 } },
+                    grid: { drawOnChartArea: false },
+                };
+            }
+
+            chartInstance = new Chart(canvas.getContext('2d'), {
+                type: 'line',
+                data: { labels, datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            labels: { color: textColor, usePointStyle: true, boxWidth: 8, font: { family: 'Plus Jakarta Sans', size: 11, weight: '600' } },
+                        },
+                        tooltip: {
+                            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.94)' : 'rgba(255, 255, 255, 0.96)',
+                            titleColor: isDark ? '#f1f5f9' : '#0f172a',
+                            bodyColor: isDark ? '#cbd5e1' : '#334155',
+                            borderColor: 'rgba(56, 189, 248, 0.4)',
+                            borderWidth: 1,
+                            padding: 10,
+                            cornerRadius: 12,
+                        },
+                    },
+                    scales,
+                },
+            });
+        }
+
+        /* WIDGET DETAIL MODAL */
+        function showDetailModal({ title, subtitle, iconHtml, bodyHtml, aiPrompt, reopenFn }) {
+            document.getElementById('detail-modal-title').textContent = title;
+            document.getElementById('detail-modal-subtitle').textContent = subtitle;
+            document.getElementById('detail-modal-icon').innerHTML = iconHtml;
+            document.getElementById('detail-modal-body').innerHTML = bodyHtml;
+            activeDetailAiPrompt = aiPrompt || `Tell me more about ${title} in ${currentPlace ? currentPlace.label : 'this area'}.`;
+            activeDetailReopen = reopenFn || null;
+            document.getElementById('widget-detail-backdrop').classList.remove('hidden');
+        }
+
+        function closeWidgetDetail() {
+            document.getElementById('widget-detail-backdrop').classList.add('hidden');
+            activeDetailReopen = null;
+        }
+
+        function askAiFromDetailModal() {
+            const prompt = activeDetailAiPrompt;
+            closeWidgetDetail();
+            openWeatherAiDrawer();
+            if (prompt) {
+                setTimeout(() => sendWeatherAiQuestion(prompt, false), 80);
+            }
+        }
+
+        function statTile(label, value, sub = '') {
+            return `
+                <div class="glass-subcard rounded-2xl p-3.5">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">${escapeHtml(label)}</div>
+                    <div class="text-base sm:text-lg font-extrabold font-mono mt-1">${escapeHtml(value)}</div>
+                    ${sub ? `<div class="text-[11px] text-[var(--text-muted)] mt-0.5">${escapeHtml(sub)}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function openWidgetDetail(kind) {
+            if (!lastWeatherPayload) return;
+            const data = lastWeatherPayload;
+            const cur = data.current || {};
+            const daily = data.daily || {};
+            const hourly = data.hourly || {};
+            const aqi = data.air_quality || {};
+            const nowHIdx = getCurrentHourIndex(data);
+            const locLabel = currentPlace ? currentPlace.label : 'Current Location';
+            const unitSym = useFahrenheit ? '°F' : '°C';
+            const info = describeWmoCode(cur.weather_code, cur.is_day);
+            const reopenFn = () => openWidgetDetail(kind);
+
+            if (kind === 'current' || kind === 'comfort') {
+                const hi0 = (daily.temperature_2m_max || [])[0];
+                const lo0 = (daily.temperature_2m_min || [])[0];
+                const dewC = cur.dew_point_2m != null ? cur.dew_point_2m : calcDewPointC(cur.temperature_2m, cur.relative_humidity_2m);
+                const diffFeels = (cur.apparent_temperature != null && cur.temperature_2m != null)
+                    ? Math.round(useFahrenheit ? (cur.apparent_temperature - cur.temperature_2m) * 9 / 5 : (cur.apparent_temperature - cur.temperature_2m))
+                    : 0;
+                const feelsNote = diffFeels === 0
+                    ? 'Matches actual air temperature'
+                    : diffFeels > 0
+                        ? `Feels ${diffFeels}° warmer due to humidity/sun`
+                        : `Feels ${Math.abs(diffFeels)}° colder due to wind chill`;
+
+                showDetailModal({
+                    title: `${kind === 'comfort' ? 'Thermal Comfort' : 'Current Conditions'} · ${locLabel}`,
+                    subtitle: `Observed at ${(cur.time || '').replace('T', ' ')} (${data.timezone || 'Local'})`,
+                    iconHtml: getWeatherSvg(info.icon, 'w-5 h-5'),
+                    aiPrompt: `Give a detailed breakdown of the current weather and comfort level in ${locLabel}.`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 flex items-center justify-between gap-4 bg-sky-500/5 border-sky-500/25">
+                            <div>
+                                <div class="text-3xl font-extrabold font-mono">${fmtTemp(cur.temperature_2m)}</div>
+                                <div class="text-sm font-bold mt-0.5">${escapeHtml(info.text)}</div>
+                                <div class="text-xs text-[var(--text-muted)] mt-1">${escapeHtml(feelsNote)}</div>
+                            </div>
+                            ${getWeatherSvg(info.icon, 'w-12 h-12')}
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Feels Like', fmtTemp(cur.apparent_temperature), 'Apparent temperature')}
+                            ${statTile('Today Range', `${fmtTemp(hi0)} / ${fmtTemp(lo0)}`, `Spread of ${fmtTemp((hi0 ?? 0) - (lo0 ?? 0)).replace('°', '')}${unitSym}`)}
+                            ${statTile('Dew Point', fmtTemp(dewC), `Humidity ${Math.round(cur.relative_humidity_2m || 0)}%`)}
+                            ${statTile('Cloud Cover', `${Math.round(cur.cloud_cover || 0)}%`, `WMO Code #${cur.weather_code ?? '--'}`)}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'wind') {
+                const spd = Math.round(cur.wind_speed_10m || 0);
+                const gst = Math.round(cur.wind_gusts_10m || 0);
+                const deg = cur.wind_direction_10m;
+                const dir = windDirLabel(deg);
+                const [bTitle, bDesc] = beaufortScale(spd);
+                const gustSpread = Math.max(gst - spd, 0);
+                const hWind = (hourly.wind_speed_10m || []).slice(nowHIdx, nowHIdx + 24);
+                const peakHourlyWind = hWind.length ? Math.round(Math.max(...hWind)) : null;
+
+                showDetailModal({
+                    title: 'Wind & Gusts Details',
+                    subtitle: locLabel,
+                    iconHtml: `<svg class="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2"></path><path d="M9.6 4.6A2 2 0 1 1 11 8H2"></path><path d="M12.6 19.4A2 2 0 1 0 14 16H2"></path></svg>`,
+                    aiPrompt: `How windy will it be over the next 24 hours in ${locLabel}, and is it good for outdoor activities?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-1.5 bg-sky-500/5 border-sky-500/25">
+                            <div class="text-xs font-extrabold uppercase tracking-wider text-sky-500">${escapeHtml(bTitle)}</div>
+                            <p class="text-xs text-[var(--text-main)] leading-relaxed">${escapeHtml(bDesc)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Sustained Speed', `${spd} km/h`, `${Math.round(spd * 0.621371)} mph · ${(spd / 3.6).toFixed(1)} m/s`)}
+                            ${statTile('Peak Gusts', `${gst} km/h`, `+${gustSpread} km/h above sustained`)}
+                            ${statTile('Wind Direction', `${dir || '--'} (${deg != null ? Math.round(deg) + '°' : '--'})`, 'Bearing from true North')}
+                            ${statTile(peakHourlyWind != null ? '24h Peak Wind' : 'Wind Chill Impact', peakHourlyWind != null ? `${peakHourlyWind} km/h` : fmtTemp(cur.apparent_temperature), peakHourlyWind != null ? 'Max forecast sustained' : 'Feels-like temperature')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'humidity') {
+                const rh = Math.round(cur.relative_humidity_2m || 0);
+                const dewC = cur.dew_point_2m != null ? cur.dew_point_2m : calcDewPointC(cur.temperature_2m, rh);
+                const cloud = Math.round(cur.cloud_cover || 0);
+                const comfort = rh < 30 ? 'Dry Air — May feel crisp or static-prone indoors.'
+                    : rh <= 60 ? 'Comfortable — Ideal moisture balance for outdoor activities.'
+                    : rh <= 75 ? 'Moderately Humid — Air feels slightly damp.'
+                    : 'Very Humid — High moisture; sweat evaporates slowly.';
+
+                showDetailModal({
+                    title: 'Humidity & Moisture Details',
+                    subtitle: locLabel,
+                    iconHtml: `<svg class="w-5 h-5 text-sky-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path></svg>`,
+                    aiPrompt: `Explain the humidity, dew point, and comfort level right now in ${locLabel}.`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-2.5">
+                            <div class="flex items-center justify-between text-xs font-bold">
+                                <span>Relative Humidity</span>
+                                <span class="font-mono text-sky-500">${rh}%</span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-slate-500/20 overflow-hidden">
+                                <div class="h-full rounded-full bg-gradient-to-r from-amber-400 via-emerald-400 to-sky-500" style="width: ${Math.min(Math.max(rh, 4), 100)}%"></div>
+                            </div>
+                            <p class="text-xs text-[var(--text-muted)]">${escapeHtml(comfort)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Dew Point', fmtTemp(dewC), 'Condensation threshold')}
+                            ${statTile('Cloud Cover', `${cloud}%`, cloud < 25 ? 'Mostly clear sky' : cloud < 70 ? 'Mixed sun & clouds' : 'Overcast sky')}
+                            ${statTile('Air Temperature', fmtTemp(cur.temperature_2m), `Spread: ${fmtTemp((cur.temperature_2m ?? 0) - (dewC ?? 0)).replace('°', '')}${unitSym}`)}
+                            ${statTile('Precipitation', `${cur.precipitation ?? 0} mm`, 'Current hourly rate')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'aqi') {
+                const usAqi = aqi.us_aqi != null ? Math.round(aqi.us_aqi) : null;
+                const pct = usAqi != null ? Math.min(Math.max((usAqi / 200) * 100, 4), 100) : 0;
+                const cat = usAqi == null ? 'Unavailable'
+                    : usAqi <= 50 ? 'Good (0–50)'
+                    : usAqi <= 100 ? 'Moderate (51–100)'
+                    : usAqi <= 150 ? 'Sensitive Groups (101–150)'
+                    : 'Unhealthy (151+)';
+                const advice = usAqi == null ? 'Live air quality sensor data is unavailable for this coordinate.'
+                    : usAqi <= 50 ? 'Air quality is clean and poses little or no risk for outdoor exercise.'
+                    : usAqi <= 100 ? 'Acceptable air quality; unusually sensitive individuals should watch for symptoms.'
+                    : 'Consider reducing prolonged or heavy outdoor exertion.';
+
+                const extraTiles = [];
+                if (aqi.pm2_5 != null) extraTiles.push(statTile('PM2.5 Fine', `${aqi.pm2_5.toFixed(1)} µg/m³`, 'Particles < 2.5 µm'));
+                if (aqi.pm10 != null) extraTiles.push(statTile('PM10 Coarse', `${aqi.pm10.toFixed(1)} µg/m³`, 'Particles < 10 µm'));
+                if (aqi.ozone != null) extraTiles.push(statTile('Ozone (O₃)', `${Math.round(aqi.ozone)} µg/m³`, 'Ground-level ozone'));
+                if (aqi.nitrogen_dioxide != null) extraTiles.push(statTile('NO₂', `${aqi.nitrogen_dioxide.toFixed(1)} µg/m³`, 'Nitrogen dioxide'));
+                if (aqi.carbon_monoxide != null) extraTiles.push(statTile('CO', `${Math.round(aqi.carbon_monoxide)} µg/m³`, 'Carbon monoxide'));
+                if (aqi.european_aqi != null) extraTiles.push(statTile('European AQI', `${Math.round(aqi.european_aqi)}`, 'EU CAQI scale'));
+                if (!extraTiles.length) extraTiles.push(statTile('Monitoring Standard', 'US EPA AQI', 'Hourly atmospheric model'));
+
+                showDetailModal({
+                    title: 'Air Quality & Pollutants',
+                    subtitle: locLabel,
+                    iconHtml: `<svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"></path><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"></path></svg>`,
+                    aiPrompt: `Analyze the current air quality (${usAqi ?? 'N/A'} US AQI) in ${locLabel} and give outdoor activity advice.`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold">${escapeHtml(cat)}</span>
+                                <span class="text-lg font-extrabold font-mono text-sky-500">${usAqi ?? 'N/A'}</span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500 relative">
+                                ${usAqi != null ? `<div class="w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-900 shadow absolute top-1/2 -translate-y-1/2 -translate-x-1/2" style="left: ${pct}%"></div>` : ''}
+                            </div>
+                            <p class="text-xs text-[var(--text-muted)]">${escapeHtml(advice)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${extraTiles.join('')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'uv') {
+                const uvList = daily.uv_index_max || [];
+                const uvMax = uvList[0];
+                const solarNow = (hourly.shortwave_radiation || [])[nowHIdx];
+                const solarSum = (daily.shortwave_radiation_sum || [])[0];
+                const pct = uvMax != null ? Math.min(Math.max((uvMax / 11) * 100, 4), 100) : 0;
+                const level = uvMax == null ? 'Unavailable'
+                    : uvMax < 3 ? 'Low (0–2)'
+                    : uvMax < 6 ? 'Moderate (3–5)'
+                    : uvMax < 8 ? 'High (6–7)'
+                    : uvMax < 11 ? 'Very High (8–10)'
+                    : 'Extreme (11+)';
+                const spfAdvice = uvMax == null ? 'No UV forecast available.'
+                    : uvMax < 3 ? 'Minimal sun protection needed for short outdoor stays; sunglasses on bright snow/water.'
+                    : uvMax < 6 ? 'Wear SPF 30+ sunscreen and sunglasses around midday.'
+                    : 'Use SPF 30–50+ sunscreen, hat, and shade between 11:00 and 16:00.';
+
+                const weekUvHtml = (daily.time || []).slice(0, 5).map((dStr, idx) => {
+                    const [y, m, d] = dStr.split('-').map(Number);
+                    const dt = new Date(y, m - 1, d, 12, 0, 0);
+                    const lbl = idx === 0 ? 'Today' : dt.toLocaleDateString('en-US', { weekday: 'short' });
+                    const val = uvList[idx];
+                    return `
+                        <div class="glass-subcard rounded-xl p-2 text-center">
+                            <div class="text-[10px] text-[var(--text-subtle)]">${lbl}</div>
+                            <div class="text-xs font-extrabold font-mono mt-0.5">${val != null ? val.toFixed(1) : '--'}</div>
+                        </div>
+                    `;
+                }).join('');
+
+                showDetailModal({
+                    title: 'UV Index & Solar Irradiance',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('sun', 'w-5 h-5'),
+                    aiPrompt: `What sun protection is needed for today's UV index (${uvMax != null ? uvMax.toFixed(1) : 'N/A'}) in ${locLabel}?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-2.5">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-bold">${escapeHtml(level)}</span>
+                                <span class="text-lg font-extrabold font-mono text-amber-400">${uvMax != null ? uvMax.toFixed(1) : '--'}</span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-gradient-to-r from-emerald-400 via-amber-400 to-fuchsia-500 relative">
+                                ${uvMax != null ? `<div class="w-3.5 h-3.5 rounded-full bg-white border-2 border-slate-900 shadow absolute top-1/2 -translate-y-1/2 -translate-x-1/2" style="left: ${pct}%"></div>` : ''}
+                            </div>
+                            <p class="text-xs text-[var(--text-muted)]">${escapeHtml(spfAdvice)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Solar Irradiance', solarNow != null ? `${Math.round(solarNow)} W/m²` : '--', 'Global horizontal irradiance')}
+                            ${statTile('Daily Solar Energy', solarSum != null ? `${solarSum.toFixed(1)} MJ/m²` : '--', 'Total shortwave sum')}
+                        </div>
+                        <div class="space-y-1.5">
+                            <div class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">5-Day Peak UV Forecast</div>
+                            <div class="grid grid-cols-5 gap-2">${weekUvHtml}</div>
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'pressure') {
+                const hpa = cur.pressure_msl;
+                const surfHpa = cur.surface_pressure;
+                const inHg = hpa ? (hpa * 0.02953).toFixed(2) : '--';
+                const kpa = hpa ? (hpa / 10).toFixed(1) : '--';
+                const systemDesc = !hpa ? 'Pressure reading unavailable.'
+                    : hpa < 1009 ? 'Low-Pressure System — Associated with unsettled weather, clouds, or precipitation.'
+                    : hpa <= 1022 ? 'Normal Barometric Pressure — Steady transitional atmospheric conditions.'
+                    : 'High-Pressure Ridge — Typically brings calmer winds and clearer skies.';
+                const pop0 = (daily.precipitation_probability_max || [])[0] ?? 0;
+
+                showDetailModal({
+                    title: 'Barometric Pressure Details',
+                    subtitle: locLabel,
+                    iconHtml: `<svg class="w-5 h-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m16.2 7.8-2 6.3-6.4 2.1 2-6.3z"></path></svg>`,
+                    aiPrompt: `Explain what the current barometric pressure (${hpa ? Math.round(hpa) + ' hPa' : 'N/A'}) means for ${locLabel}.`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-1.5 bg-indigo-500/5 border-indigo-500/25">
+                            <div class="text-xs font-extrabold uppercase tracking-wider text-indigo-400">Atmospheric Trend</div>
+                            <p class="text-xs text-[var(--text-main)] leading-relaxed">${escapeHtml(systemDesc)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Sea-Level (MSL)', hpa ? `${Math.round(hpa)} hPa` : '--', 'Standardized pressure')}
+                            ${statTile('Surface Pressure', surfHpa ? `${Math.round(surfHpa)} hPa` : '--', 'At local elevation')}
+                            ${statTile('Inches Hg / kPa', `${inHg} inHg`, `${kpa} kPa`)}
+                            ${statTile('Today Precip Risk', `${pop0}%`, 'Peak daily probability')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'sun') {
+                const sr = ((daily.sunrise || [])[0] || '').split('T')[1] || '--:--';
+                const ss = ((daily.sunset || [])[0] || '').split('T')[1] || '--:--';
+                const sunSec = (daily.sunshine_duration || [])[0];
+                const srMin = parseHhMmToMinutes(sr);
+                const ssMin = parseHhMmToMinutes(ss);
+                let durationStr = '--';
+                let solarNoonStr = '--:--';
+                let progressPct = 0;
+                let statusText = 'Solar schedule for today';
+
+                if (srMin != null && ssMin != null && ssMin > srMin) {
+                    const diff = ssMin - srMin;
+                    durationStr = `${Math.floor(diff / 60)}h ${diff % 60}m`;
+                    solarNoonStr = formatMinutesToHhMm(srMin + diff / 2);
+
+                    const curTimeStr = ((cur.time || '').split('T')[1] || '').slice(0, 5);
+                    const nowMin = parseHhMmToMinutes(curTimeStr);
+                    if (nowMin != null) {
+                        if (nowMin <= srMin) {
+                            progressPct = 0;
+                            statusText = `Sun rises in ${Math.floor((srMin - nowMin) / 60)}h ${(srMin - nowMin) % 60}m`;
+                        } else if (nowMin >= ssMin) {
+                            progressPct = 100;
+                            statusText = 'Sun has set for the day';
+                        } else {
+                            progressPct = Math.round(((nowMin - srMin) / diff) * 100);
+                            const rem = ssMin - nowMin;
+                            statusText = `${Math.floor(rem / 60)}h ${rem % 60}m of daylight remaining (${progressPct}% elapsed)`;
+                        }
+                    }
+                }
+
+                showDetailModal({
+                    title: 'Sun Cycle & Daylight',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('sun', 'w-5 h-5'),
+                    aiPrompt: `What are the sunrise, sunset, and daylight hours today in ${locLabel}?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-2.5">
+                            <div class="flex items-center justify-between text-xs font-mono font-bold">
+                                <span>↑ ${escapeHtml(sr)}</span>
+                                <span class="text-amber-400">☀ Solar Noon ${escapeHtml(solarNoonStr)}</span>
+                                <span>↓ ${escapeHtml(ss)}</span>
+                            </div>
+                            <div class="h-2.5 rounded-full bg-slate-500/20 relative overflow-hidden">
+                                <div class="h-full rounded-full bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-500" style="width: ${progressPct}%"></div>
+                            </div>
+                            <p class="text-xs text-[var(--text-muted)]">${escapeHtml(statusText)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Total Daylight', durationStr, 'Sunrise to sunset')}
+                            ${statTile('Direct Sunshine', sunSec != null ? `${(sunSec / 3600).toFixed(1)} hrs` : '--', 'Clear-sky equivalent')}
+                            ${statTile('Sunrise', sr, 'First direct sunlight')}
+                            ${statTile('Sunset', ss, 'Civil dusk begins')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'visibility') {
+                const visM = cur.visibility != null ? cur.visibility : (hourly.visibility || [])[nowHIdx];
+                const visKm = visM != null ? (visM / 1000) : null;
+                const visMi = visKm != null ? (visKm * 0.621371) : null;
+                const desc = visKm == null ? 'Visibility telemetry unavailable.'
+                    : visKm >= 16 ? 'Unlimited Horizontal Visibility — Crisp, unobstructed long-range view.'
+                    : visKm >= 8 ? 'Good Visibility — Clear road and aviation conditions.'
+                    : visKm >= 3 ? 'Moderate Visibility — Light mist, haze, or precipitation.'
+                    : 'Low Visibility — Fog, heavy snow, or dense mist; drive with caution.';
+
+                showDetailModal({
+                    title: 'Visibility & Atmospheric Clarity',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('fog', 'w-5 h-5'),
+                    aiPrompt: `How is the visibility and driving weather today in ${locLabel}?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-1.5 bg-sky-500/5 border-sky-500/25">
+                            <div class="text-xs font-extrabold uppercase tracking-wider text-sky-500">Sightline Assessment</div>
+                            <p class="text-xs text-[var(--text-main)] leading-relaxed">${escapeHtml(desc)}</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Distance (km)', visKm != null ? `${visKm.toFixed(1)} km` : '--', visM != null ? `${Math.round(visM)} meters` : '')}
+                            ${statTile('Distance (Miles)', visMi != null ? `${visMi.toFixed(1)} mi` : '--', 'Statute miles')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'precip') {
+                const pSum = (daily.precipitation_sum || [])[0] ?? 0;
+                const rSum = (daily.rain_sum || [])[0] ?? 0;
+                const sSum = (daily.snowfall_sum || [])[0] ?? 0;
+                const pHrs = (daily.precipitation_hours || [])[0] ?? 0;
+                const sDepth = (hourly.snow_depth || [])[nowHIdx];
+
+                showDetailModal({
+                    title: 'Precipitation, Rain & Snow Breakdown',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('rain', 'w-5 h-5'),
+                    aiPrompt: `Give a detailed rain and snowfall forecast for today and the next 48 hours in ${locLabel}.`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Today Precip Sum', `${pSum.toFixed(1)} mm`, `${pHrs} hrs of precipitation`)}
+                            ${statTile('Liquid Rain Sum', `${rSum.toFixed(1)} mm`, 'Today total rainfall')}
+                            ${statTile('Snowfall Sum', `${sSum.toFixed(1)} cm`, 'Today fresh snow accumulation')}
+                            ${statTile('Snow Depth on Ground', sDepth != null ? `${(sDepth * 100).toFixed(1)} cm` : '0.0 cm', `Current rate: ${cur.precipitation ?? 0} mm/h`)}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'clouds') {
+                const cTotal = Math.round(cur.cloud_cover || 0);
+                const cLow = Math.round((hourly.cloud_cover_low || [])[nowHIdx] ?? 0);
+                const cMid = Math.round((hourly.cloud_cover_mid || [])[nowHIdx] ?? 0);
+                const cHigh = Math.round((hourly.cloud_cover_high || [])[nowHIdx] ?? 0);
+
+                const barRow = (lbl, val, color) => `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-bold">
+                            <span>${lbl}</span>
+                            <span class="font-mono">${val}%</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-slate-500/20 overflow-hidden">
+                            <div class="h-full rounded-full ${color}" style="width: ${val}%"></div>
+                        </div>
+                    </div>
+                `;
+
+                showDetailModal({
+                    title: 'Cloud Cover Altitude Layers',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('cloud', 'w-5 h-5'),
+                    aiPrompt: `Will skies clear up or stay cloudy over the next 24 hours in ${locLabel}?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-3">
+                            ${barRow('Total Sky Cover', cTotal, 'bg-sky-400')}
+                            ${barRow('Low-Level Clouds (< 3 km)', cLow, 'bg-slate-400')}
+                            ${barRow('Mid-Level Clouds (3–8 km)', cMid, 'bg-indigo-400')}
+                            ${barRow('High-Level Cirrus (> 8 km)', cHigh, 'bg-cyan-300')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'stability') {
+                const cape = (hourly.cape || [])[nowHIdx];
+                const et0 = (daily.et0_fao_evapotranspiration || [])[0];
+                const evap = (hourly.evapotranspiration || [])[nowHIdx];
+
+                showDetailModal({
+                    title: 'Convective Energy & Evapotranspiration',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('storm', 'w-5 h-5'),
+                    aiPrompt: `Is there any thunderstorm or severe convective weather risk in ${locLabel} over the next few days?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('CAPE Instability', cape != null ? `${Math.round(cape)} J/kg` : '--', cape != null && cape >= 1000 ? 'Elevated storm energy' : 'Low convective potential')}
+                            ${statTile('Daily ET₀', et0 != null ? `${et0.toFixed(2)} mm` : '--', 'Reference evapotranspiration')}
+                            ${statTile('Hourly Evap', evap != null ? `${evap.toFixed(2)} mm/h` : '--', 'Surface moisture flux')}
+                            ${statTile('Elevation', data.elevation != null ? `${Math.round(data.elevation)} m` : '--', 'Grid terrain model')}
+                        </div>
+                    `,
+                });
+                return;
+            }
+
+            if (kind === 'ground') {
+                const soilT = (hourly.soil_temperature_0cm || [])[nowHIdx];
+                const soilM = (hourly.soil_moisture_0_to_1cm || [])[nowHIdx];
+                const frostRisk = soilT != null && soilT <= 0.5;
+
+                showDetailModal({
+                    title: 'Ground Surface & Frost Telemetry',
+                    subtitle: locLabel,
+                    iconHtml: getWeatherSvg('snow', 'w-5 h-5'),
+                    aiPrompt: `Is there a frost or black ice risk on roads and sidewalks tonight in ${locLabel}?`,
+                    reopenFn,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 space-y-1.5 ${frostRisk ? 'bg-cyan-500/10 border-cyan-500/35' : 'bg-emerald-500/5 border-emerald-500/25'}">
+                            <div class="text-xs font-extrabold uppercase tracking-wider ${frostRisk ? 'text-cyan-400' : 'text-emerald-400'}">
+                                ${frostRisk ? 'Surface Freezing / Frost Zone' : 'Above-Freezing Surface'}
+                            </div>
+                            <p class="text-xs text-[var(--text-main)] leading-relaxed">
+                                ${frostRisk
+                                    ? 'Ground surface temperature is at or below freezing—watch for frost or slick patches where moisture is present.'
+                                    : 'Ground surface temperature is above freezing with normal surface moisture.'}
+                            </p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2.5">
+                            ${statTile('Surface Temp (0 cm)', soilT != null ? fmtTemp(soilT) : '--', 'Topsoil / ground skin')}
+                            ${statTile('Topsoil Moisture', soilM != null ? `${Math.round(soilM * 100)}%` : '--', soilM != null ? `${soilM.toFixed(3)} m³/m³` : '')}
+                        </div>
+                    `,
+                });
+            }
+        }
+
+        function openHourlyDetail(i) {
+            if (!lastWeatherPayload) return;
+            const data = lastWeatherPayload;
+            const cur = data.current || {};
+            const hourly = data.hourly || {};
+            const hTimes = hourly.time || [];
+            if (i < 0 || i >= hTimes.length) return;
+
+            const locLabel = currentPlace ? currentPlace.label : 'Current Location';
+            const rawIso = hTimes[i];
+            const timeLabel = rawIso.slice(11, 16);
+            const dateLabel = rawIso.slice(0, 10);
+            const isDay = hourly.is_day ? hourly.is_day[i] : 1;
+            const hInfo = describeWmoCode((hourly.weather_code || [])[i], isDay);
+            const tempC = (hourly.temperature_2m || [])[i];
+            const pop = hourly.precipitation_probability ? (hourly.precipitation_probability[i] || 0) : 0;
+
+            const deltaNowC = (tempC != null && cur.temperature_2m != null) ? (tempC - cur.temperature_2m) : 0;
+            const deltaDisplay = Math.round(useFahrenheit ? deltaNowC * 9 / 5 : deltaNowC);
+            const deltaText = deltaDisplay === 0
+                ? 'Same as current temperature'
+                : deltaDisplay > 0
+                    ? `+${deltaDisplay}° warmer than now`
+                    : `${deltaDisplay}° cooler than now`;
+
+            const extraTiles = [];
+            if (hourly.apparent_temperature && hourly.apparent_temperature[i] != null) {
+                extraTiles.push(statTile('Feels Like', fmtTemp(hourly.apparent_temperature[i]), 'Apparent temp'));
+            }
+            if (hourly.wind_speed_10m && hourly.wind_speed_10m[i] != null) {
+                const wDir = hourly.wind_direction_10m ? windDirLabel(hourly.wind_direction_10m[i]) : '';
+                const gust = hourly.wind_gusts_10m && hourly.wind_gusts_10m[i] != null ? `Gusts ${Math.round(hourly.wind_gusts_10m[i])} km/h` : 'Hourly forecast';
+                extraTiles.push(statTile('Wind', `${Math.round(hourly.wind_speed_10m[i])} km/h ${wDir}`, gust));
+            }
+            if (hourly.relative_humidity_2m && hourly.relative_humidity_2m[i] != null) {
+                const dp = hourly.dew_point_2m && hourly.dew_point_2m[i] != null ? `Dew ${fmtTemp(hourly.dew_point_2m[i])}` : 'Relative humidity';
+                extraTiles.push(statTile('Humidity', `${Math.round(hourly.relative_humidity_2m[i])}%`, dp));
+            }
+            if (hourly.pressure_msl && hourly.pressure_msl[i] != null) {
+                extraTiles.push(statTile('Pressure', `${Math.round(hourly.pressure_msl[i])} hPa`, `Clouds ${Math.round((hourly.cloud_cover || [])[i] ?? 0)}%`));
+            }
+            if (hourly.visibility && hourly.visibility[i] != null) {
+                extraTiles.push(statTile('Visibility', `${(hourly.visibility[i] / 1000).toFixed(1)} km`, `UV ${(hourly.uv_index || [])[i] != null ? hourly.uv_index[i].toFixed(1) : '--'}`));
+            }
+            if (hourly.precipitation && hourly.precipitation[i] != null) {
+                extraTiles.push(statTile('Precip Volume', `${hourly.precipitation[i].toFixed(1)} mm`, `Snow ${((hourly.snowfall || [])[i] ?? 0).toFixed(1)} cm`));
+            }
+
+            showDetailModal({
+                title: `${timeLabel} Hourly Forecast`,
+                subtitle: `${dateLabel} · ${locLabel}`,
+                iconHtml: getWeatherSvg(hInfo.icon, 'w-5 h-5'),
+                aiPrompt: `What will the weather be like around ${timeLabel} on ${dateLabel} in ${locLabel}?`,
+                reopenFn: () => openHourlyDetail(i),
+                bodyHtml: `
+                    <div class="glass-subcard rounded-2xl p-4 flex items-center justify-between gap-4 bg-sky-500/5 border-sky-500/25">
+                        <div>
+                            <div class="text-3xl font-extrabold font-mono">${fmtTemp(tempC)}</div>
+                            <div class="text-sm font-bold mt-0.5">${escapeHtml(hInfo.text)}</div>
+                            <div class="text-xs text-[var(--text-muted)] mt-1">${escapeHtml(deltaText)}</div>
+                        </div>
+                        ${getWeatherSvg(hInfo.icon, 'w-12 h-12')}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        ${statTile('Precip Chance', `${pop}%`, pop >= 40 ? 'Bring rain/snow gear' : 'Low precipitation risk')}
+                        ${statTile('Period', isDay ? 'Daytime' : 'Nighttime', `Local time ${timeLabel}`)}
+                        ${extraTiles.join('')}
+                    </div>
+                `,
+            });
+        }
+
+        function openDailyDetail(idx) {
+            if (!lastWeatherPayload) return;
+            const daily = lastWeatherPayload.daily || {};
+            const dTimes = daily.time || [];
+            if (idx < 0 || idx >= dTimes.length) return;
+
+            const locLabel = currentPlace ? currentPlace.label : 'Current Location';
+            const [y, m, d] = dTimes[idx].split('-').map(Number);
+            const dt = new Date(y, m - 1, d, 12, 0, 0);
+            const fullDate = dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+            const dInfo = describeWmoCode((daily.weather_code || [])[idx], 1);
+            const hi = (daily.temperature_2m_max || [])[idx];
+            const lo = (daily.temperature_2m_min || [])[idx];
+            const appHi = (daily.apparent_temperature_max || [])[idx];
+            const appLo = (daily.apparent_temperature_min || [])[idx];
+            const pop = (daily.precipitation_probability_max || [])[idx] ?? 0;
+            const pSum = (daily.precipitation_sum || [])[idx];
+            const sSum = (daily.snowfall_sum || [])[idx];
+            const wMax = (daily.wind_speed_10m_max || [])[idx];
+            const gMax = (daily.wind_gusts_10m_max || [])[idx];
+            const uv = (daily.uv_index_max || [])[idx];
+            const sunSec = (daily.sunshine_duration || [])[idx];
+            const sr = ((daily.sunrise || [])[idx] || '').split('T')[1] || '--:--';
+            const ss = ((daily.sunset || [])[idx] || '').split('T')[1] || '--:--';
+            const swing = (hi != null && lo != null) ? Math.round(useFahrenheit ? (hi - lo) * 9 / 5 : (hi - lo)) : null;
+
+            showDetailModal({
+                title: idx === 0 ? `Today · ${fullDate}` : fullDate,
+                subtitle: locLabel,
+                iconHtml: getWeatherSvg(dInfo.icon, 'w-5 h-5'),
+                aiPrompt: `Give me outfit and activity advice for ${fullDate} in ${locLabel} (${dInfo.text}, high ${fmtTemp(hi)}, low ${fmtTemp(lo)}, ${pop}% precip).`,
+                reopenFn: () => openDailyDetail(idx),
+                bodyHtml: `
+                    <div class="glass-subcard rounded-2xl p-4 flex items-center justify-between gap-4 bg-sky-500/5 border-sky-500/25">
+                        <div>
+                            <div class="text-2xl font-extrabold font-mono">H: ${fmtTemp(hi)} · L: ${fmtTemp(lo)}</div>
+                            <div class="text-sm font-bold mt-0.5">${escapeHtml(dInfo.text)}</div>
+                            <div class="text-xs text-[var(--text-muted)] mt-1">${swing != null ? `Daily temperature swing of ${swing}°` : 'Full-day forecast'}</div>
+                        </div>
+                        ${getWeatherSvg(dInfo.icon, 'w-12 h-12')}
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        ${statTile('Feels Like Range', (appHi != null && appLo != null) ? `${fmtTemp(appHi)} / ${fmtTemp(appLo)}` : '--', 'Apparent high / low')}
+                        ${statTile('Precip & Snow', pSum != null ? `${pSum.toFixed(1)} mm · ${pop}%` : `${pop}%`, sSum != null && sSum > 0 ? `Snowfall: ${sSum.toFixed(1)} cm` : 'Mostly liquid/dry')}
+                        ${statTile('Max Wind & Gusts', wMax != null ? `${Math.round(wMax)} km/h` : '--', gMax != null ? `Peak gusts ${Math.round(gMax)} km/h` : '')}
+                        ${statTile('Max UV & Sunshine', uv != null ? `UV ${uv.toFixed(1)}` : '--', sunSec != null ? `${(sunSec / 3600).toFixed(1)} hrs sunshine` : '')}
+                        ${statTile('Sunrise', `↑ ${sr}`, 'Morning civil dawn')}
+                        ${statTile('Sunset', `↓ ${ss}`, 'Evening dusk')}
+                    </div>
+                `,
+            });
         }
 
         async function fetchAiBrief(data) {
@@ -791,11 +2329,8 @@
             const ss = ((daily.sunset || [])[0] || '').split('T')[1] || '--:--';
             const uvMax = (daily.uv_index_max || [])[0];
 
-            // Next 24 hours summary (every 3h)
             const hTimes = hourly.time || [];
-            const curIsoHour = (cur.time || '').slice(0, 13);
-            let startIdx = hTimes.findIndex(t => t.slice(0, 13) >= curIsoHour);
-            if (startIdx < 0) startIdx = 0;
+            const startIdx = getCurrentHourIndex(data);
 
             let maxPop24 = 0;
             let peakPopTime = 'later today';
@@ -807,19 +2342,18 @@
                     peakPopTime = hTimes[i].slice(11, 16);
                 }
                 if ((i - startIdx) % 3 === 0) {
-                    const hInfo = describeWmoCode(hourly.weather_code[i], hourly.is_day ? hourly.is_day[i] : 1);
-                    hourlyLines.push(`${hTimes[i].slice(11, 16)}: ${convertTempNum(hourly.temperature_2m[i])}${unitSym}, ${hInfo.text}, precip ${pop}%`);
+                    const hInfo = describeWmoCode((hourly.weather_code || [])[i], hourly.is_day ? hourly.is_day[i] : 1);
+                    hourlyLines.push(`${hTimes[i].slice(11, 16)}: ${convertTempNum((hourly.temperature_2m || [])[i])}${unitSym}, ${hInfo.text}, precip ${pop}%`);
                 }
             }
 
-            // 7-day summary
             const dTimes = daily.time || [];
             const dailyStructured = [];
             const dailyLines = dTimes.map((dStr, idx) => {
                 const [y, m, d] = dStr.split('-').map(Number);
                 const dt = new Date(y, m - 1, d, 12, 0, 0);
                 const dayLabel = idx === 0 ? 'Today' : dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-                const dInfo = describeWmoCode(daily.weather_code[idx], 1);
+                const dInfo = describeWmoCode((daily.weather_code || [])[idx], 1);
                 const hi = convertTempNum((daily.temperature_2m_max || [])[idx]);
                 const lo = convertTempNum((daily.temperature_2m_min || [])[idx]);
                 const pop = (daily.precipitation_probability_max || [])[idx] || 0;
@@ -833,10 +2367,11 @@
             const curGusts = Math.round(cur.wind_gusts_10m || 0);
             const curHum = Math.round(cur.relative_humidity_2m || 0);
             const curAqi = aqi.us_aqi != null ? Math.round(aqi.us_aqi) : null;
+            const visKm = cur.visibility != null ? `${(cur.visibility / 1000).toFixed(1)} km` : 'N/A';
 
             const text = [
                 `Location: ${currentPlace ? currentPlace.label : 'Unknown'} (Timezone: ${data.timezone || 'Auto'})`,
-                `Current: ${curTemp}${unitSym} (Feels like ${curFeels}${unitSym}), ${info.text}, Wind ${curWind} km/h ${windDirLabel(cur.wind_direction_10m)} (gusts ${curGusts} km/h), Humidity ${curHum}%, Pressure ${Math.round(cur.pressure_msl || 0)} hPa, US AQI ${curAqi ?? 'N/A'}, UV Max ${uvMax ?? 'N/A'}, Sunrise ${sr}, Sunset ${ss}`,
+                `Current: ${curTemp}${unitSym} (Feels like ${curFeels}${unitSym}), ${info.text}, Wind ${curWind} km/h ${windDirLabel(cur.wind_direction_10m)} (gusts ${curGusts} km/h), Humidity ${curHum}%, Visibility ${visKm}, Pressure ${Math.round(cur.pressure_msl || 0)} hPa, US AQI ${curAqi ?? 'N/A'}, UV Max ${uvMax ?? 'N/A'}, Sunrise ${sr}, Sunset ${ss}`,
                 `Next 24h (3-hour intervals): ${hourlyLines.join(' | ')}`,
                 `7-Day Outlook: ${dailyLines.join(' | ')}`,
             ].join('\n');
@@ -1035,10 +2570,6 @@
             }
         });
 
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeWeatherAiDrawer();
-        });
-
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('header-date-label').textContent = new Date().toLocaleDateString('en-US', {
                 weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
@@ -1060,6 +2591,415 @@
                 })
                 .catch(() => autoDetectLocation());
         });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeWidgetDetail();
+                closeWeatherAiDrawer();
+                closeNationalAlertModal();
+            }
+        });
     </script>
+
+    <!-- FULL-SCREEN NATIONAL ALERT BULLETIN MODAL -->
+    <div id="national-alert-modal-backdrop" onclick="closeNationalAlertModal()" class="hidden fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-md flex items-center justify-center p-3 sm:p-5">
+        <div onclick="event.stopPropagation()" class="w-full max-w-[660px] max-h-[90vh] rounded-3xl bg-white/95 dark:bg-slate-900/95 border-2 border-rose-500/70 shadow-2xl flex flex-col overflow-hidden">
+            <div class="px-5 py-4 bg-gradient-to-r from-rose-600/25 to-amber-500/15 border-b border-rose-500/30 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span id="modal-alert-badge" class="text-[10px] font-mono font-extrabold uppercase px-2 py-0.5 rounded-full bg-rose-600 text-white">WARNING</span>
+                        <span id="modal-alert-provider" class="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">✓ Certified Source</span>
+                    </div>
+                    <h3 id="modal-alert-title" class="text-lg sm:text-xl font-extrabold mt-1 truncate">Official Weather Alert</h3>
+                </div>
+                <button type="button" onclick="closeNationalAlertModal()" class="glass-subcard w-9 h-9 rounded-2xl flex items-center justify-center text-lg font-bold hover:text-rose-500 flex-shrink-0">×</button>
+            </div>
+
+            <div id="modal-alert-tabs" class="hidden px-5 pt-3 flex flex-wrap gap-1.5"></div>
+
+            <div class="p-5 overflow-y-auto space-y-4 text-xs sm:text-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div class="glass-subcard rounded-2xl p-3">
+                        <div class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Affected Region</div>
+                        <div id="modal-alert-area" class="font-bold mt-1">--</div>
+                    </div>
+                    <div class="glass-subcard rounded-2xl p-3">
+                        <div class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Effective / Expires</div>
+                        <div id="modal-alert-times" class="font-mono text-xs mt-1">--</div>
+                    </div>
+                </div>
+
+                <div class="rounded-2xl p-4 bg-amber-500/15 border border-amber-500/45 space-y-2">
+                    <div class="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-300">🛡️ Actionable Safety Advice</div>
+                    <ul id="modal-alert-advice" class="space-y-1.5 list-disc pl-5 text-[var(--text-main)] leading-relaxed"></ul>
+                </div>
+
+                <div class="glass-subcard rounded-2xl p-4 space-y-1.5">
+                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-[var(--text-subtle)]">Official National Agency Text</div>
+                    <p id="modal-alert-desc" class="whitespace-pre-line text-xs sm:text-sm leading-relaxed text-[var(--text-main)]">--</p>
+                </div>
+            </div>
+
+            <div class="px-5 py-3.5 border-t border-[var(--glass-border)] flex flex-wrap items-center justify-between gap-2 bg-rose-500/5">
+                <div class="flex flex-wrap items-center gap-2">
+                    <div class="inline-flex items-center rounded-2xl glass-subcard overflow-hidden">
+                        <button type="button" id="modal-translate-en-btn" onclick="translateActiveAlert(currentModalAlertIdx, 'en')" class="px-3 py-2 text-xs font-bold text-sky-500 hover:bg-sky-500/15 transition-all">
+                            English
+                        </button>
+                        <button type="button" id="modal-translate-fr-btn" onclick="translateActiveAlert(currentModalAlertIdx, 'fr')" class="px-2.5 py-2 text-xs font-bold text-indigo-400 hover:bg-indigo-500/15 border-l border-[var(--glass-border)] transition-all">
+                            FR
+                        </button>
+                        <button type="button" id="modal-translate-orig-btn" onclick="restoreOriginalAlert(currentModalAlertIdx)" class="hidden px-2.5 py-2 text-xs font-bold text-[var(--text-muted)] hover:bg-slate-500/15 border-l border-[var(--glass-border)] transition-all">
+                            Original
+                        </button>
+                    </div>
+                    <button type="button" onclick="playAlertAlarmSound(true)" class="px-3.5 py-2 rounded-2xl bg-rose-500/15 border border-rose-500/40 text-rose-500 text-xs font-bold hover:bg-rose-500/25">
+                        Sound Alarm
+                    </button>
+                    <a id="modal-alert-link" href="https://weather.gc.ca/" target="_blank" rel="noopener" class="glass-subcard px-3.5 py-2 rounded-2xl text-xs font-bold text-sky-500 hover:underline">
+                        Verify at Official Agency ↗
+                    </a>
+                </div>
+                <button type="button" onclick="closeNationalAlertModal()" class="px-4 py-2 rounded-2xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold">
+                    Acknowledge
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let activeNationalAlerts = [];
+        let alertProviderMeta = { provider: 'Environment Canada', agency_url: 'https://weather.gc.ca/' };
+        let alertAlarmMuted = localStorage.getItem('homenest_alert_muted') === '1';
+        let announcedAlertIds = new Set();
+
+        function toggleAlertMute() {
+            alertAlarmMuted = !alertAlarmMuted;
+            localStorage.setItem('homenest_alert_muted', alertAlarmMuted ? '1' : '0');
+            const btn = document.getElementById('alert-mute-btn');
+            if (btn) btn.textContent = alertAlarmMuted ? 'Unmute Alarm' : 'Mute Alarm';
+        }
+
+        function playAlertAlarmSound(forcePlay = false) {
+            if (alertAlarmMuted && !forcePlay) return;
+            try {
+                const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                if (!AudioCtx) return;
+                const ctx = new AudioCtx();
+                if (ctx.state === 'suspended') ctx.resume();
+
+                const now = ctx.currentTime;
+                const pulses = [0, 0.38, 0.76];
+                pulses.forEach((offset) => {
+                    [853, 960].forEach((freq) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + offset);
+                        gain.gain.setValueAtTime(0.001, now + offset);
+                        gain.gain.exponentialRampToValueAtTime(0.14, now + offset + 0.03);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.28);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + offset);
+                        osc.stop(now + offset + 0.30);
+                    });
+                });
+            } catch (e) {}
+        }
+
+        let alertFeedHealthy = true;
+
+        async function fetchNationalAlerts(lat, lon, label) {
+            try {
+                const url = `/api/weather/alerts?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&label=${encodeURIComponent(label || '')}`;
+                const res = await fetch(url);
+                const data = await res.json();
+                if (!data.success) return;
+
+                alertFeedHealthy = data.feed_ok !== false;
+                alertProviderMeta = {
+                    provider: data.provider || 'National Meteorological Service',
+                    agency_url: data.agency_url || 'https://weather.gc.ca/',
+                };
+                activeNationalAlerts = data.alerts || [];
+                renderNationalAlertsUI();
+            } catch (e) {
+                alertFeedHealthy = false;
+                renderNationalAlertsUI();
+            }
+        }
+
+        let currentModalAlertIdx = 0;
+
+        function getAlertDisplayView(item) {
+            if (!item) return null;
+            const lang = item._activeLang || 'orig';
+            if (lang !== 'orig' && item._translations && item._translations[lang]) {
+                return Object.assign({}, item, item._translations[lang], {
+                    _isTranslated: true,
+                    _langLabel: lang === 'fr' ? 'Français' : 'English',
+                    _transSource: item._translationSources ? item._translationSources[lang] : '',
+                });
+            }
+            return Object.assign({}, item, { _isTranslated: false });
+        }
+
+        async function translateActiveAlert(idx = 0, targetLang = 'en') {
+            const item = activeNationalAlerts[idx];
+            if (!item) return;
+
+            item._translations = item._translations || {};
+            item._translationSources = item._translationSources || {};
+
+            if (item._translations[targetLang]) {
+                item._activeLang = targetLang;
+                renderNationalAlertsUI();
+                if (!document.getElementById('national-alert-modal-backdrop').classList.contains('hidden')) {
+                    openNationalAlertModal(idx);
+                }
+                return;
+            }
+
+            const btnIds = ['banner-translate-en-btn', 'banner-translate-fr-btn', 'modal-translate-en-btn', 'modal-translate-fr-btn'];
+            btnIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = true;
+            });
+            const activeBtns = targetLang === 'fr'
+                ? ['banner-translate-fr-btn', 'modal-translate-fr-btn']
+                : ['banner-translate-en-btn', 'modal-translate-en-btn'];
+            activeBtns.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'Translating...';
+            });
+
+            try {
+                const res = await fetch('/api/weather/translate-alert', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: item.title,
+                        headline: item.headline,
+                        area: item.area,
+                        description: item.description,
+                        advice: item.advice || [],
+                        target_lang: targetLang,
+                    }),
+                });
+                const data = await res.json();
+                if (data.success && data.translated) {
+                    item._translations[targetLang] = data.translated;
+                    item._translationSources[targetLang] = data.source || 'Translated';
+                    item._activeLang = targetLang;
+                }
+            } catch (e) {}
+
+            btnIds.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.disabled = false;
+            });
+            ['banner-translate-en-btn', 'modal-translate-en-btn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'English';
+            });
+            ['banner-translate-fr-btn', 'modal-translate-fr-btn'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = 'FR';
+            });
+
+            renderNationalAlertsUI();
+            if (!document.getElementById('national-alert-modal-backdrop').classList.contains('hidden')) {
+                openNationalAlertModal(idx);
+            }
+        }
+
+        function restoreOriginalAlert(idx = 0) {
+            const item = activeNationalAlerts[idx];
+            if (!item) return;
+            item._activeLang = 'orig';
+            renderNationalAlertsUI();
+            if (!document.getElementById('national-alert-modal-backdrop').classList.contains('hidden')) {
+                openNationalAlertModal(idx);
+            }
+        }
+
+        function renderNationalAlertsUI() {
+            const pill = document.getElementById('alert-status-pill');
+            const dot = document.getElementById('alert-status-dot');
+            const statusText = document.getElementById('alert-status-text');
+            const banner = document.getElementById('national-alert-banner');
+            const muteBtn = document.getElementById('alert-mute-btn');
+            if (muteBtn) muteBtn.textContent = alertAlarmMuted ? 'Unmute Alarm' : 'Mute Alarm';
+
+            const shortProvider = alertProviderMeta.provider.includes('Canada') ? 'ECCC'
+                : alertProviderMeta.provider.includes('NOAA') ? 'NWS'
+                : alertProviderMeta.provider.includes('INMET') ? 'INMET' : 'WMO CAP';
+
+            if (!activeNationalAlerts.length) {
+                banner.classList.add('hidden');
+                if (!alertFeedHealthy) {
+                    pill.className = 'glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-amber-500/45 text-amber-500 transition-all';
+                    dot.className = 'w-2 h-2 rounded-full bg-amber-400';
+                    statusText.textContent = `${shortProvider} Offline`;
+                } else {
+                    pill.className = 'glass-subcard px-3 py-2 rounded-2xl text-xs font-bold flex items-center gap-1.5 border-emerald-500/35 text-emerald-500 transition-all';
+                    dot.className = 'w-2 h-2 rounded-full bg-emerald-400';
+                    statusText.textContent = `${shortProvider} Clear`;
+                }
+                return;
+            }
+
+            const rawTop = activeNationalAlerts[0];
+            const top = getAlertDisplayView(rawTop);
+            const isThreat = top.type === 'warning' || top.severity === 'extreme' || top.severity === 'severe';
+
+            pill.className = isThreat
+                ? 'px-3 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 bg-rose-600 text-white shadow-lg animate-pulse transition-all'
+                : 'px-3 py-2 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow transition-all';
+            dot.className = 'w-2 h-2 rounded-full bg-white';
+            statusText.textContent = `${activeNationalAlerts.length} ${shortProvider} Alert${activeNationalAlerts.length > 1 ? 's' : ''}`;
+
+            banner.classList.remove('hidden');
+            banner.className = isThreat
+                ? 'relative z-20 rounded-3xl p-5 sm:p-6 border-2 border-rose-500/80 bg-gradient-to-r from-rose-600/20 via-red-600/15 to-amber-500/15 backdrop-blur-2xl alert-threat-pulse space-y-4'
+                : 'relative z-20 rounded-3xl p-5 sm:p-6 border-2 border-amber-500/75 bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-yellow-500/10 backdrop-blur-2xl space-y-4';
+
+            document.getElementById('alert-severity-badge').textContent = `${(top.severity || 'severe').toUpperCase()} ${top.type.toUpperCase()}`;
+            document.getElementById('alert-severity-badge').className = isThreat
+                ? 'text-[10px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-rose-600 text-white'
+                : 'text-[10px] font-mono font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500 text-slate-950';
+
+            document.getElementById('alert-provider-badge').textContent = top._isTranslated
+                ? `✓ ${top.provider.toUpperCase()} · TRANSLATED (${top._langLabel.toUpperCase()})`
+                : `✓ CERTIFIED · ${top.provider.toUpperCase()}`;
+
+            const origBtn = document.getElementById('banner-translate-orig-btn');
+            if (origBtn) origBtn.classList.toggle('hidden', !top._isTranslated);
+
+            document.getElementById('alert-banner-title').textContent = top.title;
+            document.getElementById('alert-banner-title').className = isThreat
+                ? 'text-xl sm:text-2xl font-extrabold tracking-tight text-rose-600 dark:text-rose-300'
+                : 'text-xl sm:text-2xl font-extrabold tracking-tight text-amber-600 dark:text-amber-300';
+
+            const expStr = top.expires ? top.expires.replace('T', ' ').slice(0, 16) : 'Until further notice';
+            document.getElementById('alert-banner-meta').textContent = `Area: ${top.area} · Expires: ${expStr}`;
+            document.getElementById('alert-banner-desc').textContent = top.description || top.headline;
+
+            const countBadge = document.getElementById('alert-count-badge');
+            if (activeNationalAlerts.length > 1) {
+                countBadge.textContent = `+${activeNationalAlerts.length - 1} more active alert(s)`;
+                countBadge.classList.remove('hidden');
+            } else {
+                countBadge.classList.add('hidden');
+            }
+
+            const adviceList = document.getElementById('alert-banner-advice');
+            adviceList.innerHTML = (top.advice || []).map(line => `<li>${escapeHtml(line)}</li>`).join('');
+
+            const alertKey = `${rawTop.id}:${rawTop.title}`;
+            if (isThreat && !announcedAlertIds.has(alertKey)) {
+                announcedAlertIds.add(alertKey);
+                playAlertAlarmSound(false);
+                openNationalAlertModal(0);
+            }
+        }
+
+        function openNationalAlertModal(idx = 0) {
+            if (!activeNationalAlerts.length) return;
+            currentModalAlertIdx = idx;
+            const rawItem = activeNationalAlerts[idx] || activeNationalAlerts[0];
+            const item = getAlertDisplayView(rawItem);
+
+            const tabs = document.getElementById('modal-alert-tabs');
+            if (activeNationalAlerts.length > 1) {
+                tabs.classList.remove('hidden');
+                tabs.innerHTML = activeNationalAlerts.map((a, i) => {
+                    const view = getAlertDisplayView(a);
+                    return `
+                        <button type="button" onclick="openNationalAlertModal(${i})"
+                            class="px-3 py-1 rounded-full text-xs font-bold ${i === idx ? 'bg-rose-600 text-white' : 'glass-subcard'}">
+                            ${escapeHtml(view.title)}
+                        </button>
+                    `;
+                }).join('');
+            } else {
+                tabs.classList.add('hidden');
+            }
+
+            document.getElementById('modal-alert-badge').textContent = `${(item.severity || 'severe').toUpperCase()} ${item.type.toUpperCase()}`;
+            document.getElementById('modal-alert-provider').textContent = item._isTranslated
+                ? `✓ ${item.provider} · Translated to ${item._langLabel} (${item._transSource})`
+                : `✓ Certified · ${item.provider}`;
+
+            const modalOrigBtn = document.getElementById('modal-translate-orig-btn');
+            if (modalOrigBtn) modalOrigBtn.classList.toggle('hidden', !item._isTranslated);
+
+            document.getElementById('modal-alert-title').textContent = item.title;
+            document.getElementById('modal-alert-area').textContent = item.area || '--';
+            const eff = item.effective ? item.effective.replace('T', ' ').slice(0, 16) : 'Now';
+            const exp = item.expires ? item.expires.replace('T', ' ').slice(0, 16) : 'Until further notice';
+            document.getElementById('modal-alert-times').textContent = `${eff} → ${exp}`;
+            document.getElementById('modal-alert-desc').textContent = item.description || item.headline;
+            document.getElementById('modal-alert-link').href = item.agency_url || alertProviderMeta.agency_url;
+            document.getElementById('modal-alert-advice').innerHTML = (item.advice || []).map(a => `<li>${escapeHtml(a)}</li>`).join('');
+
+            document.getElementById('national-alert-modal-backdrop').classList.remove('hidden');
+        }
+
+        function handleAlertPillClick() {
+            if (activeNationalAlerts.length) {
+                openNationalAlertModal(0);
+            } else {
+                showDetailModal({
+                    title: 'Certified National Weather Alerts',
+                    subtitle: alertProviderMeta.provider,
+                    iconHtml: getWeatherSvg('sun', 'w-5 h-5'),
+                    aiPrompt: `Are there any upcoming weather hazards or alerts expected for ${currentPlace ? currentPlace.label : 'this area'}?`,
+                    bodyHtml: `
+                        <div class="glass-subcard rounded-2xl p-4 bg-emerald-500/10 border-emerald-500/35 space-y-1.5">
+                            <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-500">✓ Certified Feed Active — No Warnings</div>
+                            <p class="text-xs text-[var(--text-main)] leading-relaxed">
+                                Live bulletins are verified directly with <strong>${escapeHtml(alertProviderMeta.provider)}</strong>. There are currently zero active warnings, watches, or advisories for <strong>${escapeHtml(currentPlace ? currentPlace.label : 'your area')}</strong>.
+                            </p>
+                        </div>
+                    `,
+                });
+            }
+        }
+
+
+        function closeNationalAlertModal() {
+            document.getElementById('national-alert-modal-backdrop').classList.add('hidden');
+        }
+
+        function triggerTestWeatherAlert() {
+            const loc = currentPlace ? currentPlace.label : 'Candiac, QC';
+            activeNationalAlerts = [{
+                id: 'test-eccc-' + Date.now(),
+                provider: 'Environment and Climate Change Canada (ECCC)',
+                certified: true,
+                type: 'warning',
+                severity: 'extreme',
+                risk_colour: 'red',
+                title: 'Freezing Rain & Severe Wind Warning (Test)',
+                headline: `Freezing Rain & Severe Wind Warning in effect for ${loc}`,
+                area: loc,
+                effective: new Date().toISOString(),
+                expires: new Date(Date.now() + 6 * 3600 * 1000).toISOString(),
+                description: `TEST BULLETIN: Environment and Climate Change Canada has issued a severe weather test alert for ${loc}. Rapid ice accretion of 10 to 15 mm combined with wind gusts up to 80 km/h may cause hazardous travel and localized utility outages.`,
+                advice: [
+                    'Delay non-essential highway and local travel until roads and sidewalks are treated.',
+                    'Stay clear of falling tree branches and downed power lines weighed down by ice.',
+                    'Keep phones and backup power banks charged in case of localized outages.'
+                ],
+                agency_url: 'https://weather.gc.ca/warnings/index_e.html',
+            }];
+            renderNationalAlertsUI();
+            playAlertAlarmSound(true);
+            openNationalAlertModal(0);
+        }
+    </script>
+
 </body>
 </html>
